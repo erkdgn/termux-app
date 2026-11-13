@@ -3,54 +3,54 @@ package com.termux.app.linux;
 import com.termux.shared.termux.TermuxConstants;
 
 /** File system locations used by Linux installs. All values are fixed paths, never user text. */
-final class LinuxPaths {
+public final class LinuxPaths {
 
     private final String mRootfsDir;
     private final String mMetaDir;
     private final String mHomeDir;
 
-    LinuxPaths(String rootfsDir, String metaDir, String homeDir) {
+    public LinuxPaths(String rootfsDir, String metaDir, String homeDir) {
         mRootfsDir = rootfsDir;
         mMetaDir = metaDir;
         mHomeDir = homeDir;
     }
 
-    static LinuxPaths defaults() {
+    public static LinuxPaths defaults() {
         return new LinuxPaths(
             TermuxConstants.TERMUX_PREFIX_DIR_PATH + "/var/lib/proot-distro/installed-rootfs",
             TermuxConstants.TERMUX_DATA_HOME_DIR_PATH + "/linux-installs",
             TermuxConstants.TERMUX_HOME_DIR_PATH);
     }
 
-    String rootfs(String alias) {
+    public String rootfs(String alias) {
         return mRootfsDir + "/" + alias;
     }
 
-    String metaFile(String alias) {
+    public String metaFile(String alias) {
         return mMetaDir + "/" + alias + ".properties";
     }
 
-    String doneFile(String alias) {
+    public String doneFile(String alias) {
         return mMetaDir + "/" + alias + ".done";
     }
 
-    String rootKeyFile(String alias) {
+    public String rootKeyFile(String alias) {
         return mMetaDir + "/" + alias + ".root.pub";
     }
 
-    String userKeyFile(String alias) {
+    public String userKeyFile(String alias) {
         return mMetaDir + "/" + alias + ".user.pub";
     }
 
-    String rootfsDir() {
+    public String rootfsDir() {
         return mRootfsDir;
     }
 
-    String metaDir() {
+    public String metaDir() {
         return mMetaDir;
     }
 
-    String homeDir() {
+    public String homeDir() {
         return mHomeDir;
     }
 }

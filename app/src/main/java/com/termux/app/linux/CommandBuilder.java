@@ -12,20 +12,20 @@ import java.util.Set;
  * paths are emitted. Key text is never part of a command: keys are copied from staging files.
  * Every returned command ends with a newline (except {@link #SSH_STOP}).
  */
-final class CommandBuilder {
+public final class CommandBuilder {
 
     /** Ctrl+C, sent to the terminal to stop a foreground sshd. */
-    static final String SSH_STOP = "\u0003";
+    public static final String SSH_STOP = "\u0003";
 
     private static final String AND = " && ";
 
     private final LinuxPaths mPaths;
 
-    CommandBuilder(LinuxPaths paths) {
+    public CommandBuilder(LinuxPaths paths) {
         mPaths = paths;
     }
 
-    String install(InstallOptions o) {
+    public String install(InstallOptions o) {
         String a = o.alias;
         StringBuilder sb = new StringBuilder();
         sb.append("pkg update -y");
@@ -50,33 +50,33 @@ final class CommandBuilder {
         return sb.append('\n').toString();
     }
 
-    String login(String alias) {
+    public String login(String alias) {
         return "proot-distro login " + alias + "\n";
     }
 
-    String loginUser(String alias, String user) {
+    public String loginUser(String alias, String user) {
         return "proot-distro login " + alias + " --user " + user + "\n";
     }
 
-    String sshStart(String alias) {
+    public String sshStart(String alias) {
         return "exec proot-distro login " + alias + " -- /usr/sbin/sshd -D -e\n";
     }
 
-    static String sshSessionName(String alias) {
+    public static String sshSessionName(String alias) {
         return alias + "-ssh";
     }
 
-    String backup(String alias, boolean downloadsAvailable, String timestamp) {
+    public String backup(String alias, boolean downloadsAvailable, String timestamp) {
         String dir = downloadsAvailable ? mPaths.homeDir() + "/storage/downloads" : mPaths.homeDir();
         return "proot-distro backup --output " + dir + "/" + alias + "-" + timestamp + ".tar.gz " + alias + "\n";
     }
 
-    String remove(String alias) {
+    public String remove(String alias) {
         return "proot-distro remove " + alias + AND + "rm -f " + mPaths.metaFile(alias) + " "
             + mPaths.doneFile(alias) + " " + mPaths.rootKeyFile(alias) + " " + mPaths.userKeyFile(alias) + "\n";
     }
 
-    String setPassword(String alias, String account) {
+    public String setPassword(String alias, String account) {
         return passwd(alias, account) + "\n";
     }
 
