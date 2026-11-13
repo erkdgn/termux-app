@@ -101,4 +101,72 @@ public class InputValidatorTest {
         assertEquals(Distro.UBUNTU, Distro.fromId("ubuntu"));
         assertNull(Distro.fromId("arch"));
     }
+
+    @Test
+    public void hostnameRules() {
+        StringBuilder l63 = new StringBuilder();
+        for (int i = 0; i < 63; i++) l63.append('a');
+        assertTrue(InputValidator.isValidHostname("myserver"));
+        assertTrue(InputValidator.isValidHostname("a"));
+        assertTrue(InputValidator.isValidHostname("a-1"));
+        assertTrue(InputValidator.isValidHostname(l63.toString()));
+        assertFalse(InputValidator.isValidHostname("-a"));
+        assertFalse(InputValidator.isValidHostname("a-"));
+        assertFalse(InputValidator.isValidHostname("My"));
+        assertFalse(InputValidator.isValidHostname("a.b"));
+        assertFalse(InputValidator.isValidHostname(l63 + "a"));
+        assertFalse(InputValidator.isValidHostname("a;b"));
+        assertFalse(InputValidator.isValidHostname(null));
+    }
+
+    @Test
+    public void parsePackagesWhitespace() {
+        assertEquals(java.util.Arrays.asList("htop", "tmux", "htop"),
+            InputValidator.parsePackages(" htop\ttmux\n\nhtop "));
+        assertNull(InputValidator.parsePackages("x$(id)"));
+        StringBuilder many = new StringBuilder();
+        for (int i = 0; i < 31; i++) many.append("p").append(i).append(' ');
+        assertNull(InputValidator.parsePackages(many.toString()));
+        assertTrue(InputValidator.parsePackages("").isEmpty());
+        assertTrue(InputValidator.parsePackages(null).isEmpty());
+    }
+
+    @Test
+    public void labelWhitelist() {
+        assertTrue(InputValidator.isSafeLabel("== \u015eifre: deploy_bot =="));
+        assertFalse(InputValidator.isSafeLabel("a\"b"));
+        assertFalse(InputValidator.isSafeLabel("$x"));
+        assertFalse(InputValidator.isSafeLabel("a`b"));
+        assertFalse(InputValidator.isSafeLabel("a'b"));
+        assertFalse(InputValidator.isSafeLabel(""));
+    }
+
+    @Test
+    public void versionMustMatchDistro() {
+        InstallOptions o = new InstallOptions.Builder().distro(Distro.DEBIAN)
+            .version(DistroVersion.UBUNTU_24_04).alias("deb").build();
+        assertTrue(InputValidator.validate(o).contains(InputValidator.Error.VERSION));
+    }
+
+    @Test
+    public void builderDefaults() {
+        InstallOptions o = new InstallOptions.Builder().distro(Distro.UBUNTU).alias("ubuntu").build();
+        assertEquals(DistroVersion.UBUNTU_24_04, o.version);
+        assertEquals(2022, o.sshPort);
+        assertEquals("", o.timezone);
+        assertTrue(o.groups.isEmpty());
+        assertTrue(o.extraPackages.isEmpty());
+        assertEquals(RootSshLogin.NO, o.rootSshLogin());
+    }
+
+    @Test
+    public void newFieldsValidated() {
+        InstallOptions o = new InstallOptions.Builder().distro(Distro.UBUNTU).alias("ubuntu")
+            .hostname("Bad_Host").timezone("../x")
+            .extraPackages(java.util.Arrays.asList("ok", "bad;x")).build();
+        EnumSet<InputValidator.Error> e = InputValidator.validate(o);
+        assertTrue(e.contains(InputValidator.Error.HOSTNAME));
+        assertTrue(e.contains(InputValidator.Error.TIMEZONE));
+        assertTrue(e.contains(InputValidator.Error.PACKAGES));
+    }
 }
