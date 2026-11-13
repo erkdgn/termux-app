@@ -308,7 +308,7 @@ public class InstallStoreTest {
     @Test
     public void tamperedMetadataSanitized() throws IOException {
         writeProps("u1", "distro=ubuntu\nhostname=a;rm -rf\ntimezone=../../etc\nuser=e$(id)\n"
-            + "groups=PYTHON,EVIL\nextraPackages=htop x$(id)\nrootSshLogin=EVIL\nversion=99\n");
+            + "groups=PYTHON,EVIL\nextraPackages=htop x$(id)\nrootSshLogin=EVIL\nversion=99\nsshPort=99999\n");
         mkRootfs("u1");
         InstallInfo i = store.scan(null).get(0);
         assertEquals("", i.hostname);
@@ -318,6 +318,17 @@ public class InstallStoreTest {
         assertEquals(Arrays.asList("htop"), i.extraPackages);
         assertEquals(RootSshLogin.KEY_ONLY, i.rootSshLogin);
         assertNull(i.version);
+        assertEquals(0, i.sshPort);
+    }
+
+    @Test
+    public void saveEditRejectsInvalid() throws IOException {
+        try {
+            store.saveEdit("u1", new EditInfo(null, null, "e$(id)", "", false, 0, false, RootSshLogin.NO));
+            fail();
+        } catch (IllegalArgumentException expected) {
+            assertFalse(new File(paths.metaFile("u1")).exists());
+        }
     }
 
     @Test

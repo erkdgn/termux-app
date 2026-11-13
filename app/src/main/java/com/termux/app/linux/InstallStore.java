@@ -86,6 +86,7 @@ public final class InstallStore {
      */
     public void saveEdit(String alias, EditInfo e) throws IOException {
         if (!InputValidator.isValidAlias(alias)) throw new IllegalArgumentException("alias");
+        if (!InputValidator.validate(e).isEmpty()) throw new IllegalArgumentException("invalid edit");
         File dir = new File(mPaths.metaDir());
         if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
             throw new IOException("Cannot create " + dir);
@@ -118,12 +119,7 @@ public final class InstallStore {
     /** Deletes all metadata of an install. Only for explicit user actions. */
     public void forget(String alias) {
         if (!InputValidator.isValidAlias(alias)) throw new IllegalArgumentException("alias");
-        new File(mPaths.metaFile(alias)).delete();
-        new File(mPaths.doneFile(alias)).delete();
-        new File(mPaths.failedFile(alias)).delete();
-        new File(mPaths.pkgFailedFile(alias)).delete();
-        new File(mPaths.rootKeyFile(alias)).delete();
-        new File(mPaths.userKeyFile(alias)).delete();
+        for (String f : mPaths.metadataFiles(alias)) new File(f).delete();
     }
 
     private static void writeKey(String path, String key) throws IOException {
@@ -214,7 +210,7 @@ public final class InstallStore {
         } catch (NumberFormatException e) {
             port = 0;
         }
-        b.sshPort(port);
+        b.sshPort(InputValidator.isValidPort(port) ? port : 0);
         RootSshLogin login = RootSshLogin.fromName(p.getProperty("rootSshLogin"));
         b.rootSshLogin(login == null ? RootSshLogin.KEY_ONLY : login);
         Set<PackageGroup> groups = EnumSet.noneOf(PackageGroup.class);

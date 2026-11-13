@@ -45,6 +45,8 @@
     <string name="linux_unknown_distro">Bilinmiyor</string>
     <string name="linux_ssh_port_label">SSH: %1$d</string>
     <string name="linux_password_for_title">Şifre belirlenecek hesap</string>
+    <string name="linux_password_label_user">%s kullanıcısının şifresi</string>
+    <string name="linux_password_label_root">root şifresi</string>
     <string name="linux_delete_confirm">%1$s silinsin mi? Bu işlem geri alınamaz.</string>
     <string name="linux_close_sessions_first">Önce bu kurulumun oturumlarını kapatın</string>
     <string name="linux_save_failed">Kurulum ayarları kaydedilemedi</string>

@@ -1,7 +1,9 @@
 package com.termux.app.linux;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,48 +21,117 @@ public final class CommandBuilder {
 
     private static final String AND = " && ";
 
-    private final LinuxPaths mPaths;
+    private static final String ENV = " -- env DEBIAN_FRONTEND=noninteractive bash -c '";
+    private static final String HOSTS_DELETE = "sed -i \"/^127.0.1.1 /d\" /etc/hosts";
 
+    private final LinuxPaths mPaths;
+    private final String mUserLabelFormat;
+    private final String mRootLabel;
+
+    /** English password labels. */
     public CommandBuilder(LinuxPaths paths) {
+        this(paths, "Password for user %s", "Password for root");
+    }
+
+    /**
+     * @param userPasswordLabelFormat contains one %s for the user name
+     * @throws IllegalArgumentException if a formatted label contains characters outside the whitelist
+     */
+    public CommandBuilder(LinuxPaths paths, String userPasswordLabelFormat, String rootPasswordLabel) {
+        if (userPasswordLabelFormat == null || rootPasswordLabel == null
+            || !InputValidator.isSafeLabel(String.format(userPasswordLabelFormat, "user"))
+            || !InputValidator.isSafeLabel(rootPasswordLabel)) {
+            throw new IllegalArgumentException("label");
+        }
         mPaths = paths;
+        mUserLabelFormat = userPasswordLabelFormat;
+        mRootLabel = rootPasswordLabel;
     }
 
     public String install(InstallOptions o) {
         String a = o.alias;
+        String login = loginPrefix(a, o.hostname);
         StringBuilder sb = new StringBuilder("if pkg update -y");
         sb.append(AND).append("pkg install -y proot-distro");
-        sb.append(AND).append("proot-distro install --override-alias ").append(a).append(' ').append(o.distro.id());
-        sb.append(AND).append("proot-distro login ").append(a)
-            .append(" -- env DEBIAN_FRONTEND=noninteractive bash -c '").append(inner(o)).append('\'');
+        sb.append(AND).append("proot-distro install --override-alias ").append(a).append(' ').append(o.version.imageRef());
+        sb.append(AND).append(login).append(ENV).append(inner(o)).append('\'');
         // Keys are piped into the container, so this works whatever rootfs layout proot-distro uses.
         if (!o.rootKey.isEmpty()) {
-            appendKeyInstall(sb, a, mPaths.rootKeyFile(a), "/root/.ssh", null);
+            appendKeyInstall(sb, login, mPaths.rootKeyFile(a), "/root/.ssh", null);
         }
         if (o.hasUser() && !o.userKey.isEmpty()) {
-            appendKeyInstall(sb, a, mPaths.userKeyFile(a), "/home/" + o.user + "/.ssh", o.user);
+            appendKeyInstall(sb, login, mPaths.userKeyFile(a), "/home/" + o.user + "/.ssh", o.user);
         }
         // The marker files tell the app how the install ended; the session itself stays open either way.
         sb.append("; then touch ").append(mPaths.doneFile(a));
         if (o.hasUser()) {
-            sb.append(AND).append(passwd(a, o.user));
+            sb.append(AND).append("echo \"== ").append(String.format(mUserLabelFormat, o.user)).append(" ==\"")
+                .append(AND).append(login).append(" -- passwd ").append(o.user);
         }
         if (o.rootPassword) {
-            sb.append(AND).append(passwd(a, "root"));
+            sb.append(AND).append("echo \"== ").append(mRootLabel).append(" ==\"")
+                .append(AND).append(login).append(" -- passwd root");
+        }
+        List<String> pkgs = packageList(o.groups, o.extraPackages);
+        if (!pkgs.isEmpty()) {
+            // Non-fatal: a failing optional package only sets the marker.
+            sb.append("; ").append(login).append(ENV).append("apt-get install -y ").append(join(pkgs, " "))
+                .append("' || touch ").append(mPaths.pkgFailedFile(a));
         }
         sb.append("; else touch ").append(mPaths.failedFile(a)).append("; fi");
         return sb.append('\n').toString();
     }
 
-    public String login(String alias) {
-        return "proot-distro login " + alias + "\n";
+    public String login(String alias, String hostname) {
+        return loginPrefix(alias, hostname) + "\n";
     }
 
-    public String loginUser(String alias, String user) {
-        return "proot-distro login " + alias + " --user " + user + "\n";
+    public String loginUser(String alias, String hostname, String user) {
+        return loginPrefix(alias, hostname) + " --user " + user + "\n";
     }
 
-    public String sshStart(String alias) {
-        return "exec proot-distro login " + alias + " -- /usr/sbin/sshd -D -e\n";
+    public String sshStart(String alias, String hostname) {
+        return "exec " + loginPrefix(alias, hostname) + " -- /usr/sbin/sshd -D -e\n";
+    }
+
+    public String update(String alias, String hostname) {
+        return loginPrefix(alias, hostname) + ENV + "apt-get update" + AND
+            + "apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade'\n";
+    }
+
+    /** @throws IllegalArgumentException if there is nothing to install or a token is invalid */
+    public String installPackages(String alias, String hostname, Set<PackageGroup> groups, List<String> extras) {
+        List<String> pkgs = packageList(groups, extras);
+        if (pkgs.isEmpty()) throw new IllegalArgumentException("no packages");
+        for (String p : pkgs) {
+            if (!InputValidator.isValidPackage(p)) throw new IllegalArgumentException("package");
+        }
+        return loginPrefix(alias, hostname) + ENV + "apt-get update" + AND + "apt-get install -y " + join(pkgs, " ")
+            + "'" + AND + "rm -f " + mPaths.pkgFailedFile(alias) + " || touch " + mPaths.pkgFailedFile(alias) + "\n";
+    }
+
+    /** Returns "" when there is nothing to apply. */
+    public String applyEdit(String alias, String hostname, boolean sshChanged, boolean ssh, int port,
+                            RootSshLogin mode, boolean hostnameChanged) {
+        StringBuilder steps = new StringBuilder();
+        if (sshChanged && ssh) {
+            steps.append("(command -v sshd >/dev/null || (apt-get update").append(AND)
+                .append("apt-get install -y openssh-server))").append(AND).append("ssh-keygen -A").append(AND)
+                .append("mkdir -p /run/sshd").append(AND)
+                .append("printf \"Port ").append(port).append("\\nPermitRootLogin ").append(mode.sshdValue())
+                .append("\\n\" > /etc/ssh/sshd_config.d/termux.conf");
+        }
+        if (hostnameChanged) {
+            if (steps.length() > 0) steps.append(AND);
+            steps.append(hostname == null || hostname.isEmpty() ? HOSTS_DELETE : hostsLine(hostname));
+        }
+        if (steps.length() == 0) return "";
+        return loginPrefix(alias, hostname) + ENV + steps + "'\n";
+    }
+
+    /** For display and copying only; never executed by the app. */
+    public static String displaySshCommand(String user, int port, String ip) {
+        return "ssh -p " + port + " " + (user == null || user.isEmpty() ? "root" : user) + "@" + ip;
     }
 
     public String backup(String alias, boolean downloadsAvailable, String timestamp) {
@@ -69,20 +140,35 @@ public final class CommandBuilder {
     }
 
     public String remove(String alias) {
-        return "proot-distro remove " + alias + AND + "rm -f " + mPaths.metaFile(alias) + " "
-            + mPaths.doneFile(alias) + " " + mPaths.failedFile(alias) + " " + mPaths.rootKeyFile(alias) + " " + mPaths.userKeyFile(alias) + "\n";
+        StringBuilder sb = new StringBuilder("proot-distro remove ").append(alias).append(AND).append("rm -f");
+        for (String f : mPaths.metadataFiles(alias)) sb.append(' ').append(f);
+        return sb.append('\n').toString();
     }
 
-    public String setPassword(String alias, String account) {
-        return passwd(alias, account) + "\n";
+    public String setPassword(String alias, String hostname, String account) {
+        return loginPrefix(alias, hostname) + " -- passwd " + account + "\n";
     }
 
-    private static String passwd(String alias, String account) {
-        return "proot-distro login " + alias + " -- passwd " + account;
+    /** {@code proot-distro login <alias>[ --hostname <h>]}; the hostname is re-validated. */
+    private static String loginPrefix(String alias, String hostname) {
+        if (hostname == null || hostname.isEmpty()) return "proot-distro login " + alias;
+        if (!InputValidator.isValidHostname(hostname)) throw new IllegalArgumentException("hostname");
+        return "proot-distro login " + alias + " --hostname " + hostname;
     }
 
-    private static void appendKeyInstall(StringBuilder sb, String alias, String keyFile, String sshDir, String owner) {
-        sb.append(AND).append("proot-distro login ").append(alias).append(" -- sh -c \"mkdir -p ").append(sshDir)
+    private static String hostsLine(String hostname) {
+        return HOSTS_DELETE + AND + "echo \"127.0.1.1 " + hostname + "\" >> /etc/hosts";
+    }
+
+    private static List<String> packageList(Set<PackageGroup> groups, List<String> extras) {
+        Set<String> pkgs = new LinkedHashSet<>();
+        if (groups != null) for (PackageGroup g : groups) pkgs.addAll(g.packages());
+        if (extras != null) pkgs.addAll(extras);
+        return new ArrayList<>(pkgs);
+    }
+
+    private static void appendKeyInstall(StringBuilder sb, String login, String keyFile, String sshDir, String owner) {
+        sb.append(AND).append(login).append(" -- sh -c \"mkdir -p ").append(sshDir)
             .append(AND).append("chmod 700 ").append(sshDir)
             .append(AND).append("cat > ").append(sshDir).append("/authorized_keys")
             .append(AND).append("chmod 600 ").append(sshDir).append("/authorized_keys");
@@ -109,12 +195,29 @@ public final class CommandBuilder {
         }
         if (o.sudo) pkgs.add("sudo");
         if (o.ssh) pkgs.add("openssh-server");
+        if (!o.timezone.isEmpty()) pkgs.add("tzdata");
+        if (o.localeTr) pkgs.add("locales");
         if (!pkgs.isEmpty()) {
             sb.append(AND).append("apt-get install -y ").append(join(pkgs, " "));
         }
 
+        if (!o.timezone.isEmpty()) {
+            sb.append(AND).append("ln -sf /usr/share/zoneinfo/").append(o.timezone).append(" /etc/localtime")
+                .append(AND).append("echo ").append(o.timezone).append(" > /etc/timezone");
+        }
+        if (o.localeTr) {
+            if (o.distro == Distro.UBUNTU) {
+                sb.append(AND).append("locale-gen tr_TR.UTF-8").append(AND).append("update-locale LANG=tr_TR.UTF-8");
+            } else {
+                sb.append(AND).append("sed -i \"s/^# *tr_TR.UTF-8 UTF-8/tr_TR.UTF-8 UTF-8/\" /etc/locale.gen")
+                    .append(AND).append("locale-gen").append(AND).append("update-locale LANG=tr_TR.UTF-8");
+            }
+        }
+        if (!o.hostname.isEmpty()) {
+            sb.append(AND).append(hostsLine(o.hostname));
+        }
         if (o.ssh) {
-            String mode = o.rootPassword ? "yes" : (!o.rootKey.isEmpty() ? "prohibit-password" : "no");
+            String mode = o.rootSshLogin().sshdValue();
             sb.append(AND).append("ssh-keygen -A").append(AND).append("mkdir -p /run/sshd").append(AND)
                 .append("printf \"Port ").append(o.sshPort).append("\\nPermitRootLogin ").append(mode)
                 .append("\\n\" > /etc/ssh/sshd_config.d/termux.conf");

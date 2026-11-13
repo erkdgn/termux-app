@@ -1,5 +1,8 @@
 package com.termux.app.linux;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.termux.shared.termux.TermuxConstants;
 
 /** File system locations used by Linux installs. All values are fixed paths, never user text. */
@@ -55,6 +58,12 @@ public final class LinuxPaths {
 
     public String userKeyFile(String alias) {
         return mMetaDir + "/" + alias + ".user.pub";
+    }
+
+    /** All per-install files under the meta dir (metadata, markers, staged keys). */
+    public List<String> metadataFiles(String alias) {
+        return Arrays.asList(metaFile(alias), doneFile(alias), failedFile(alias), pkgFailedFile(alias),
+            rootKeyFile(alias), userKeyFile(alias));
     }
 
     public String containersDir() {

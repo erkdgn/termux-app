@@ -79,7 +79,8 @@ public class LinuxInstallsActivity extends AppCompatActivity {
 
         LinuxPaths paths = LinuxPaths.defaults();
         mStore = new InstallStore(paths);
-        mCommands = new CommandBuilder(paths);
+        mCommands = new CommandBuilder(paths, getString(R.string.linux_password_label_user),
+            getString(R.string.linux_password_label_root));
 
         // Snapshot taken when the page opens; the page is modal, so it cannot go stale while shown.
         String[] open = getIntent().getStringArrayExtra(SessionRequest.EXTRA_OPEN_SESSIONS);
@@ -142,7 +143,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
         List<SessionRequest> requests = new ArrayList<>();
         Set<String> taken = new HashSet<>(mOpenSessions);
         addSshAutoStart(info, requests, taken);
-        requests.add(SessionRequest.open(SessionNames.firstFree(info.alias, taken), mCommands.login(info.alias)));
+        requests.add(SessionRequest.open(SessionNames.firstFree(info.alias, taken), mCommands.login(info.alias, info.hostname)));
         finishWith(requests);
     }
 
@@ -152,7 +153,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
         Set<String> taken = new HashSet<>(mOpenSessions);
         addSshAutoStart(info, requests, taken);
         requests.add(SessionRequest.open(SessionNames.firstFree(info.alias, taken),
-            mCommands.loginUser(info.alias, info.user)));
+            mCommands.loginUser(info.alias, info.hostname, info.user)));
         finishWith(requests);
     }
 
@@ -160,7 +161,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     private void addSshAutoStart(InstallInfo info, List<SessionRequest> requests, Set<String> taken) {
         String sshName = SessionNames.ssh(info.alias);
         if (info.ssh && info.sshAutoStart && !mOpenSessions.contains(sshName)) {
-            requests.add(SessionRequest.open(sshName, mCommands.sshStart(info.alias)));
+            requests.add(SessionRequest.open(sshName, mCommands.sshStart(info.alias, info.hostname)));
             taken.add(sshName);
         }
     }
@@ -190,7 +191,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
             switch (item.getItemId()) {
                 case MENU_SSH_START:
                     finishWith(Collections.singletonList(
-                        SessionRequest.open(sshName, mCommands.sshStart(info.alias))));
+                        SessionRequest.open(sshName, mCommands.sshStart(info.alias, info.hostname))));
                     return true;
                 case MENU_SSH_STOP:
                     finishWith(Collections.singletonList(
@@ -214,14 +215,14 @@ public class LinuxInstallsActivity extends AppCompatActivity {
 
     private void chooseAccountForPassword(InstallInfo info) {
         if (!InputValidator.isValidUser(info.user)) {
-            openAction(info, mCommands.setPassword(info.alias, "root"));
+            openAction(info, mCommands.setPassword(info.alias, info.hostname, "root"));
             return;
         }
         final String[] accounts = {info.user, "root"};
         new AlertDialog.Builder(this)
             .setTitle(R.string.linux_password_for_title)
             .setItems(accounts, (dialog, which) ->
-                openAction(info, mCommands.setPassword(info.alias, accounts[which])))
+                openAction(info, mCommands.setPassword(info.alias, info.hostname, accounts[which])))
             .setNegativeButton(R.string.linux_cancel, null)
             .show();
     }
