@@ -23,6 +23,7 @@ Quick how-to about Termux package management is available at [Package Management
 
 ## Contents
 - [Termux App and Plugins](#termux-app-and-plugins)
+- [Linux Manager](#linux-manager)
 - [Installation](#installation)
 - [Uninstallation](#uninstallation)
 - [Important Links](#important-links)
@@ -44,6 +45,20 @@ The core [Termux](https://github.com/termux/termux-app) app comes with the follo
 - [Termux:Styling](https://github.com/termux/termux-styling)
 - [Termux:Tasker](https://github.com/termux/termux-tasker)
 - [Termux:Widget](https://github.com/termux/termux-widget)
+##
+
+
+
+## Linux Manager
+
+The app includes a **Linux Manager** screen (long-press the terminal and select `Linux Manager`) to manage `proot-distro` Linux distributions and local servers **without leaving Termux**:
+
+- **Preparation:** update packages (`pkg update && pkg upgrade -y`), install `proot-distro` and grant storage access (`termux-setup-storage`).
+- **Distributions (proot-distro):** lists installed distributions with a live status (whether a session for that distribution is currently active), and offers per-distribution actions: `Login` (opens a new terminal session running `proot-distro login <alias>`), `Backup` and `Remove`, plus one-tap `Install Ubuntu` and an `XFCE + VNC` (GUI) installation inside Ubuntu.
+- **Servers:** start/stop and live running status for an SSH server (port `8022`, requires `pkg install openssh`), HTTP servers (Python on `8080`, BusyBox on `8081`) and a VNC server inside Ubuntu (`5901`). Custom servers with user-defined start/stop commands can be added and are persisted in shared preferences.
+
+Commands are executed through the app's own `TermuxService` execution intents (visible terminal sessions or background tasks), so everything stays inside the app. Server and distribution statuses refresh automatically every 5 seconds while the screen is open.
+
 ##
 
 
