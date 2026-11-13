@@ -30,15 +30,26 @@ import java.util.concurrent.Executors;
 public final class LinuxManagerActivity extends AppCompatActivity {
 
     private static final String LOG_TAG = "LinuxManagerActivity";
+    private static final long AUTO_REFRESH_INTERVAL_MS = 5000;
 
     private LinearLayout mDistrosContainer;
     private LinearLayout mServersContainer;
     private TextView mNoDistrosView;
 
     private final List<ServerItem> mServers = new ArrayList<>();
+    private final List<String> mDistros = new ArrayList<>();
     private final Map<String, TextView> mStatusViews = new HashMap<>();
+    private final Map<String, TextView> mDistroStatusViews = new HashMap<>();
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
+
+    private final Runnable mAutoRefreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            refreshStatuses();
+            mMainHandler.postDelayed(this, AUTO_REFRESH_INTERVAL_MS);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +91,18 @@ public final class LinuxManagerActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        mMainHandler.postDelayed(mAutoRefreshRunnable, AUTO_REFRESH_INTERVAL_MS);
+    }
+
+    @Override
+    protected void onPause() {
+        mMainHandler.removeCallbacks(mAutoRefreshRunnable);
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         mExecutor.shutdownNow();
         super.onDestroy();
@@ -106,20 +129,49 @@ public final class LinuxManagerActivity extends AppCompatActivity {
         refreshServerStatuses();
     }
 
+    private void refreshStatuses() {
+        refreshDistroStatuses();
+        refreshServerStatuses();
+    }
+
     private void refreshDistros() {
         mExecutor.execute(() -> {
             final List<String> distros = LinuxManagerUtils.listInstalledDistros();
-            mMainHandler.post(() -> buildDistroRows(distros));
+            final Map<String, Boolean> statuses = new HashMap<>();
+            for (String distro : distros) {
+                statuses.put(distro, LinuxManagerUtils.isProcessRunning(this,
+                    LinuxManagerUtils.PROOT_DISTRO_INSTALLED_DIR_PATH + "/" + distro));
+            }
+            mMainHandler.post(() -> buildDistroRows(distros, statuses));
         });
     }
 
-    private void buildDistroRows(List<String> distros) {
+    private void refreshDistroStatuses() {
+        final List<String> snapshot = new ArrayList<>(mDistros);
+        if (snapshot.isEmpty()) return;
+        mExecutor.execute(() -> {
+            final Map<String, Boolean> statuses = new HashMap<>();
+            for (String distro : snapshot) {
+                statuses.put(distro, LinuxManagerUtils.isProcessRunning(this,
+                    LinuxManagerUtils.PROOT_DISTRO_INSTALLED_DIR_PATH + "/" + distro));
+            }
+            mMainHandler.post(() -> applyDistroStatuses(statuses));
+        });
+    }
+
+    private void buildDistroRows(List<String> distros, Map<String, Boolean> statuses) {
+        mDistros.clear();
+        mDistros.addAll(distros);
         mDistrosContainer.removeAllViews();
+        mDistroStatusViews.clear();
         mNoDistrosView.setVisibility(distros.isEmpty() ? View.VISIBLE : View.GONE);
         LayoutInflater inflater = getLayoutInflater();
         for (String distro : distros) {
             View row = inflater.inflate(R.layout.item_linux_distro, mDistrosContainer, false);
             ((TextView) row.findViewById(R.id.distro_name)).setText(distro);
+            TextView statusView = row.findViewById(R.id.distro_status);
+            mDistroStatusViews.put(distro, statusView);
+            setStatusView(statusView, statuses.get(distro));
             row.findViewById(R.id.button_login_distro).setOnClickListener(v ->
                 LinuxManagerUtils.runInTerminalSession(this, "proot-distro login " + distro,
                     LinuxManagerUtils.PROOT_DISTRO_EXECUTABLE, "login", distro));
@@ -130,6 +182,14 @@ public final class LinuxManagerActivity extends AppCompatActivity {
             row.findViewById(R.id.button_remove_distro).setOnClickListener(v ->
                 showRemoveDistroDialog(distro));
             mDistrosContainer.addView(row);
+        }
+    }
+
+    private void applyDistroStatuses(Map<String, Boolean> statuses) {
+        for (Map.Entry<String, Boolean> entry : statuses.entrySet()) {
+            TextView statusView = mDistroStatusViews.get(entry.getKey());
+            if (statusView != null)
+                setStatusView(statusView, entry.getValue());
         }
     }
 
