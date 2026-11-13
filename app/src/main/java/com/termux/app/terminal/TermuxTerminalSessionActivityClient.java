@@ -438,15 +438,39 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
      * Opens a new named session, makes it current and queues {@code input} to be typed once its
      * shell has started (see {@link #setTerminalShellPid}). Must be called on the main thread.
      *
-     * @return false, creating nothing and writing nothing, if a session with this name already
-     * exists (callers treat that as "already running") or no session could be created (e.g. session
-     * limit reached, after showing the dialog).
+     * Finished (not running) sessions with the same name are removed first, since Termux keeps a
+     * session open after a non-zero exit.
+     *
+     * @return false, creating nothing and writing nothing, if a running session with this name
+     * already exists (callers treat that as "already running") or no session could be created (e.g.
+     * session limit reached, after showing the dialog).
      */
     public boolean openSessionWithInput(String sessionName, String input) {
-        if (!findSessionsByName(sessionName).isEmpty()) return false;
+        List<TerminalSession> sameName = findSessionsByName(sessionName);
+        for (TerminalSession existing : sameName) {
+            if (existing.isRunning()) return false;
+        }
+
+        TermuxService service = mActivity.getTermuxService();
+        if (service == null) return false;
+        boolean removedCurrent = false;
+        for (TerminalSession finished : sameName) {
+            if (finished == mActivity.getCurrentSession()) removedCurrent = true;
+            // Not removeFinishedSession(): that finishes the activity when the list becomes empty,
+            // and we are about to add a session. The new session becomes current below.
+            service.removeTermuxSession(finished);
+        }
 
         TermuxSession termuxSession = createSession(false, sessionName);
-        if (termuxSession == null) return false;
+        if (termuxSession == null) {
+            // Do not leave the view attached to a removed session.
+            int size = service.getTermuxSessionsSize();
+            if (removedCurrent && size > 0) {
+                TermuxSession last = service.getTermuxSession(size - 1);
+                if (last != null) setCurrentSession(last.getTerminalSession());
+            }
+            return false;
+        }
 
         TerminalSession terminalSession = termuxSession.getTerminalSession();
         // Never write now: the shell is only spawned when the view first sizes the session, and
@@ -460,12 +484,17 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
     /**
      * Types {@code input} into the session named {@code sessionName}. Main thread only.
      *
-     * @return false, writing nothing, if zero or more than one session has that name, or the
-     * matching session's shell has exited. If its shell has not started yet the input is appended to
-     * its pending input; otherwise it is written immediately.
+     * Only running sessions are considered.
+     *
+     * @return false, writing nothing, if zero or more than one running session has that name. If
+     * its shell has not started yet the input is appended to its pending input; otherwise it is
+     * written immediately.
      */
     public boolean sendToSession(String sessionName, String input) {
-        List<TerminalSession> matches = findSessionsByName(sessionName);
+        List<TerminalSession> matches = new ArrayList<>();
+        for (TerminalSession candidate : findSessionsByName(sessionName)) {
+            if (candidate.isRunning()) matches.add(candidate);
+        }
         if (matches.size() != 1) return false;
 
         TerminalSession terminalSession = matches.get(0);
@@ -494,7 +523,7 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
         }
     }
 
-    /** Names of the currently open sessions (empty string for unnamed ones). */
+    /** Names of the sessions whose shell is running (empty string for unnamed ones); finished ones are skipped. */
     public String[] getOpenSessionNames() {
         TermuxService service = mActivity.getTermuxService();
         if (service == null) return new String[0];
@@ -504,7 +533,10 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
         for (int i = 0; i < size; i++) {
             TermuxSession termuxSession = service.getTermuxSession(i);
             if (termuxSession == null) continue;
-            String name = termuxSession.getTerminalSession().mSessionName;
+            TerminalSession terminalSession = termuxSession.getTerminalSession();
+            // A finished session that Termux kept open must not count as running.
+            if (!terminalSession.isRunning()) continue;
+            String name = terminalSession.mSessionName;
             names.add(name == null ? "" : name);
         }
         return names.toArray(new String[0]);

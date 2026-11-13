@@ -24,8 +24,8 @@ public final class InputValidator {
 
     private InputValidator() {}
 
-    // Pattern "$" matches before a trailing line terminator, so use matches() on a pattern with
-    // explicit checks: reject any string containing CR or LF first.
+    // Matcher.matches() requires the whole string to match, so a trailing newline is already
+    // rejected; the explicit CR/LF check is defence in depth against future pattern changes.
     private static boolean matches(Pattern p, String s) {
         return s != null && s.indexOf('\n') < 0 && s.indexOf('\r') < 0 && p.matcher(s).matches();
     }

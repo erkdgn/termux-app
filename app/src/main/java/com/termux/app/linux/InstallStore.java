@@ -52,6 +52,7 @@ public final class InstallStore {
         }
         // A stale marker from an earlier install of this alias must not make a new install look READY.
         new File(mPaths.doneFile(o.alias)).delete();
+        new File(mPaths.failedFile(o.alias)).delete();
         writeKey(mPaths.rootKeyFile(o.alias), o.rootKey);
         writeKey(mPaths.userKeyFile(o.alias), o.userKey);
     }
@@ -104,8 +105,12 @@ public final class InstallStore {
             Properties p = readProps(alias);
             InstallInfo.Status status;
             boolean installing = sessions.contains(SessionNames.install(alias));
+            boolean failed = new File(mPaths.failedFile(alias)).exists();
             if (hasRootfs && new File(mPaths.doneFile(alias)).exists()) {
                 status = InstallInfo.Status.READY;
+            } else if (failed && (installing || hasRootfs)) {
+                // The install chain failed; its session stays open at the prompt, so check this first.
+                status = InstallInfo.Status.INCOMPLETE;
             } else if (installing) {
                 status = InstallInfo.Status.INSTALLING;
             } else if (hasRootfs) {
@@ -162,6 +167,7 @@ public final class InstallStore {
     private void removeMetadata(String alias) {
         new File(mPaths.metaFile(alias)).delete();
         new File(mPaths.doneFile(alias)).delete();
+        new File(mPaths.failedFile(alias)).delete();
         new File(mPaths.rootKeyFile(alias)).delete();
         new File(mPaths.userKeyFile(alias)).delete();
     }

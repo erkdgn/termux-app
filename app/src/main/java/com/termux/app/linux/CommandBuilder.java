@@ -27,8 +27,7 @@ public final class CommandBuilder {
 
     public String install(InstallOptions o) {
         String a = o.alias;
-        StringBuilder sb = new StringBuilder();
-        sb.append("pkg update -y");
+        StringBuilder sb = new StringBuilder("if pkg update -y");
         sb.append(AND).append("pkg install -y proot-distro");
         sb.append(AND).append("proot-distro install --override-alias ").append(a).append(' ').append(o.distro.id());
         sb.append(AND).append("proot-distro login ").append(a)
@@ -40,13 +39,15 @@ public final class CommandBuilder {
         if (o.hasUser() && !o.userKey.isEmpty()) {
             appendKeyInstall(sb, mPaths.userKeyFile(a), rootfs + "/home/" + o.user + "/.ssh");
         }
-        sb.append(AND).append("touch ").append(mPaths.doneFile(a));
+        // The marker files tell the app how the install ended; the session itself stays open either way.
+        sb.append("; then touch ").append(mPaths.doneFile(a));
         if (o.hasUser()) {
             sb.append(AND).append(passwd(a, o.user));
         }
         if (o.rootPassword) {
             sb.append(AND).append(passwd(a, "root"));
         }
+        sb.append("; else touch ").append(mPaths.failedFile(a)).append("; fi");
         return sb.append('\n').toString();
     }
 
@@ -69,7 +70,7 @@ public final class CommandBuilder {
 
     public String remove(String alias) {
         return "proot-distro remove " + alias + AND + "rm -f " + mPaths.metaFile(alias) + " "
-            + mPaths.doneFile(alias) + " " + mPaths.rootKeyFile(alias) + " " + mPaths.userKeyFile(alias) + "\n";
+            + mPaths.doneFile(alias) + " " + mPaths.failedFile(alias) + " " + mPaths.rootKeyFile(alias) + " " + mPaths.userKeyFile(alias) + "\n";
     }
 
     public String setPassword(String alias, String account) {

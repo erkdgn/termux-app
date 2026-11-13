@@ -14,10 +14,10 @@ public class CommandBuilderTest {
     public void minimalInstall() {
         InstallOptions o = new InstallOptions(Distro.UBUNTU, "u1", "", false, false, false, 2022,
             false, false, "", "");
-        assertEquals("pkg update -y && pkg install -y proot-distro && proot-distro install --override-alias u1 ubuntu"
+        assertEquals("if pkg update -y && pkg install -y proot-distro && proot-distro install --override-alias u1 ubuntu"
             + " && proot-distro login u1 -- env DEBIAN_FRONTEND=noninteractive bash -c 'apt-get update"
             + " && apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade'"
-            + " && touch /M/u1.done\n", b.install(o));
+            + "; then touch /M/u1.done; else touch /M/u1.failed; fi\n", b.install(o));
     }
 
     @Test
@@ -31,8 +31,9 @@ public class CommandBuilderTest {
         assertTrue(c, c.contains("useradd -m -s /bin/bash -G sudo erkan"));
         assertTrue(c, c.contains("install -D -m 600 /M/d1.root.pub /R/d1/root/.ssh/authorized_keys"));
         assertTrue(c, c.contains("install -D -m 600 /M/d1.user.pub /R/d1/home/erkan/.ssh/authorized_keys"));
-        assertTrue(c, c.endsWith("touch /M/d1.done && proot-distro login d1 -- passwd erkan"
-            + " && proot-distro login d1 -- passwd root\n"));
+        assertTrue(c, c.startsWith("if pkg update -y && "));
+        assertTrue(c, c.endsWith("; then touch /M/d1.done && proot-distro login d1 -- passwd erkan"
+            + " && proot-distro login d1 -- passwd root; else touch /M/d1.failed; fi\n"));
     }
 
     @Test
@@ -60,15 +61,15 @@ public class CommandBuilderTest {
 
     @Test
     public void backupFallsBackToHome() {
-        assertEquals("proot-distro backup --output /H/u1-20261113-1200.tar.gz u1\n",
-            b.backup("u1", false, "20261113-1200"));
-        assertEquals("proot-distro backup --output /H/storage/downloads/u1-20261113-1200.tar.gz u1\n",
-            b.backup("u1", true, "20261113-1200"));
+        assertEquals("proot-distro backup --output /H/u1-20261113-120000.tar.gz u1\n",
+            b.backup("u1", false, "20261113-120000"));
+        assertEquals("proot-distro backup --output /H/storage/downloads/u1-20261113-120000.tar.gz u1\n",
+            b.backup("u1", true, "20261113-120000"));
     }
 
     @Test
-    public void removeCleansMetadata() {
-        assertEquals("proot-distro remove u1 && rm -f /M/u1.properties /M/u1.done /M/u1.root.pub /M/u1.user.pub\n",
+    public void removeCleansFailedMarker() {
+        assertEquals("proot-distro remove u1 && rm -f /M/u1.properties /M/u1.done /M/u1.failed /M/u1.root.pub /M/u1.user.pub\n",
             b.remove("u1"));
     }
 

@@ -81,6 +81,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
         mStore = new InstallStore(paths);
         mCommands = new CommandBuilder(paths);
 
+        // Snapshot taken when the page opens; the page is modal, so it cannot go stale while shown.
         String[] open = getIntent().getStringArrayExtra(SessionRequest.EXTRA_OPEN_SESSIONS);
         if (open != null) mOpenSessions.addAll(Arrays.asList(open));
 
@@ -140,19 +141,28 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     private void login(InstallInfo info) {
         List<SessionRequest> requests = new ArrayList<>();
         Set<String> taken = new HashSet<>(mOpenSessions);
-        String sshName = SessionNames.ssh(info.alias);
-        if (info.ssh && info.sshAutoStart && !mOpenSessions.contains(sshName)) {
-            requests.add(SessionRequest.open(sshName, mCommands.sshStart(info.alias)));
-            taken.add(sshName);
-        }
+        addSshAutoStart(info, requests, taken);
         requests.add(SessionRequest.open(SessionNames.firstFree(info.alias, taken), mCommands.login(info.alias)));
         finishWith(requests);
     }
 
     private void loginUser(InstallInfo info) {
         if (!InputValidator.isValidUser(info.user)) return;
-        finishWith(Collections.singletonList(SessionRequest.open(
-            SessionNames.firstFree(info.alias, mOpenSessions), mCommands.loginUser(info.alias, info.user))));
+        List<SessionRequest> requests = new ArrayList<>();
+        Set<String> taken = new HashSet<>(mOpenSessions);
+        addSshAutoStart(info, requests, taken);
+        requests.add(SessionRequest.open(SessionNames.firstFree(info.alias, taken),
+            mCommands.loginUser(info.alias, info.user)));
+        finishWith(requests);
+    }
+
+    /** Prepends the sshd session request when SSH auto-start is on and its session is not running. */
+    private void addSshAutoStart(InstallInfo info, List<SessionRequest> requests, Set<String> taken) {
+        String sshName = SessionNames.ssh(info.alias);
+        if (info.ssh && info.sshAutoStart && !mOpenSessions.contains(sshName)) {
+            requests.add(SessionRequest.open(sshName, mCommands.sshStart(info.alias)));
+            taken.add(sshName);
+        }
     }
 
     private void openAction(InstallInfo info, String input) {
@@ -236,7 +246,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     }
 
     private static String timestamp() {
-        return new SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(new Date());
+        return new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date());
     }
 
     private class InstallsAdapter extends BaseAdapter {

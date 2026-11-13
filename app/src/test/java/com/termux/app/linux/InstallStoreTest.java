@@ -187,4 +187,48 @@ public class InstallStoreTest {
         mkRootfs("u1");
         assertEquals(InstallInfo.Status.INCOMPLETE, store.scan(null).get(0).status);
     }
+
+    private void mkFailed(String alias) throws IOException {
+        assertTrue(new File(paths.failedFile(alias)).createNewFile());
+    }
+
+    @Test
+    public void failedWhileSessionOpenIsIncomplete() throws IOException {
+        store.save(opts("u1", "", ""));
+        mkRootfs("u1");
+        mkFailed("u1");
+        List<InstallInfo> l = store.scan(Collections.singleton(SessionNames.install("u1")));
+        assertEquals(1, l.size());
+        assertEquals(InstallInfo.Status.INCOMPLETE, l.get(0).status);
+    }
+
+    @Test
+    public void failedWithoutRootfsAndSessionOpenIsListed() throws IOException {
+        store.save(opts("u1", "", ""));
+        mkFailed("u1");
+        List<InstallInfo> l = store.scan(Collections.singleton(SessionNames.install("u1")));
+        assertEquals(1, l.size());
+        assertEquals(InstallInfo.Status.INCOMPLETE, l.get(0).status);
+        assertTrue(new File(paths.metaFile("u1")).exists());
+        assertTrue(new File(paths.failedFile("u1")).exists());
+    }
+
+    @Test
+    public void failedWithoutRootfsAndNoSessionIsOrphanCleaned() throws IOException {
+        store.save(opts("u1", "", ""));
+        mkFailed("u1");
+        assertTrue(store.scan(Collections.<String>emptySet()).isEmpty());
+        assertFalse(new File(paths.metaFile("u1")).exists());
+        assertFalse(new File(paths.failedFile("u1")).exists());
+    }
+
+    @Test
+    public void saveClearsStaleFailedMarker() throws IOException {
+        assertTrue(new File(paths.metaDir()).mkdirs());
+        mkFailed("u1");
+        store.save(opts("u1", "", ""));
+        assertFalse(new File(paths.failedFile("u1")).exists());
+        assertEquals(InstallInfo.Status.INSTALLING,
+            store.scan(Collections.singleton(SessionNames.install("u1"))).get(0).status);
+    }
 }

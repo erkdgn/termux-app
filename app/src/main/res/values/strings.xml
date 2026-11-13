@@ -280,7 +280,7 @@
     <string name="linux_ssh_port_label">SSH: %1$d</string>
     <string name="linux_password_for_title">Set password for</string>
     <string name="linux_delete_confirm">Delete %1$s? This cannot be undone.</string>
-    <string name="linux_close_sessions_first">Close this install's sessions first</string>
+    <string name="linux_close_sessions_first">Close this install\'s sessions first</string>
     <string name="linux_save_failed">Could not save the install settings</string>
     <string name="linux_install_invalid">This install is not valid or its name is already in use</string>
     <string name="linux_open_installs">Linux installs</string>
