@@ -37,3 +37,6 @@ local.properties
 .swp
 ehthumbs.db
 Thumbs.db
+
+# Local arm64-v8a APK output of build-apk64.sh
+/build-apk64/
