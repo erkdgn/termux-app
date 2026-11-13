@@ -27,4 +27,26 @@
     <string name="linux_error_ssh_no_access">SSH için bir giriş yolu gerekli: kullanıcı adı, root şifresi veya açık anahtar ekleyin</string>
     <string name="linux_error_user_key_without_user">Kullanıcı anahtarı için kullanıcı adı gerekli</string>
     <string name="linux_error_sudo_without_user">sudo için kullanıcı adı gerekli</string>
+    <string name="linux_installs_title">Linux Kurulumları</string>
+    <string name="linux_new_install">Yeni kurulum</string>
+    <string name="linux_empty">Henüz kurulum yok</string>
+    <string name="linux_login">Giriş</string>
+    <string name="linux_login_user">Kullanıcı girişi</string>
+    <string name="linux_more">Diğer işlemler</string>
+    <string name="linux_ssh_start">SSH başlat</string>
+    <string name="linux_ssh_stop">SSH durdur</string>
+    <string name="linux_set_password">Şifre belirle</string>
+    <string name="linux_backup">Yedekle</string>
+    <string name="linux_delete">Sil</string>
+    <string name="linux_status_incomplete">tamamlanmadı</string>
+    <string name="linux_status_installing">kuruluyor…</string>
+    <string name="linux_unknown_distro">Bilinmiyor</string>
+    <string name="linux_ssh_port_label">SSH: %1$d</string>
+    <string name="linux_password_for_title">Şifre belirlenecek hesap</string>
+    <string name="linux_account_root">root</string>
+    <string name="linux_delete_confirm">%1$s silinsin mi? Bu işlem geri alınamaz.</string>
+    <string name="linux_stop_ssh_first">Önce SSH\'yi durdurun</string>
+    <string name="linux_save_failed">Kurulum ayarları kaydedilemedi</string>
+    <string name="linux_install_invalid">Bu kurulum geçerli değil veya adı zaten kullanılıyor</string>
+    <string name="linux_cancel">İptal</string>
 </resources>

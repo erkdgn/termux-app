@@ -263,4 +263,26 @@
     <string name="linux_error_ssh_no_access">SSH needs a way to log in: add a username, a root password or a public key</string>
     <string name="linux_error_user_key_without_user">A user key needs a username</string>
     <string name="linux_error_sudo_without_user">Sudo needs a username</string>
+    <string name="linux_installs_title">Linux installs</string>
+    <string name="linux_new_install">New install</string>
+    <string name="linux_empty">No installs yet</string>
+    <string name="linux_login">Login</string>
+    <string name="linux_login_user">User login</string>
+    <string name="linux_more">More actions</string>
+    <string name="linux_ssh_start">Start SSH</string>
+    <string name="linux_ssh_stop">Stop SSH</string>
+    <string name="linux_set_password">Set password</string>
+    <string name="linux_backup">Back up</string>
+    <string name="linux_delete">Delete</string>
+    <string name="linux_status_incomplete">incomplete</string>
+    <string name="linux_status_installing">installing…</string>
+    <string name="linux_unknown_distro">Unknown</string>
+    <string name="linux_ssh_port_label">SSH: %1$d</string>
+    <string name="linux_password_for_title">Set password for</string>
+    <string name="linux_account_root">root</string>
+    <string name="linux_delete_confirm">Delete %1$s? This cannot be undone.</string>
+    <string name="linux_stop_ssh_first">Stop SSH first</string>
+    <string name="linux_save_failed">Could not save the install settings</string>
+    <string name="linux_install_invalid">This install is not valid or its name is already in use</string>
+    <string name="linux_cancel">Cancel</string>
 </resources>

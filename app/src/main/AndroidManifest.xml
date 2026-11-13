@@ -102,10 +102,17 @@
             android:label="@string/title_activity_termux_settings"
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
-        <!-- TODO(next task): add android:parentActivityName=".app.activities.LinuxInstallsActivity" once that class exists. -->
+        <activity
+            android:name=".app.activities.LinuxInstallsActivity"
+            android:exported="false"
+            android:label="@string/linux_installs_title"
+            android:parentActivityName=".app.TermuxActivity"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
         <activity
             android:name=".app.activities.LinuxInstallFormActivity"
             android:exported="false"
+            android:parentActivityName=".app.activities.LinuxInstallsActivity"
             android:label="@string/linux_form_title"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
