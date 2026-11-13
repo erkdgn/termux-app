@@ -50,6 +50,8 @@ public final class InstallStore {
         } finally {
             out.close();
         }
+        // A stale marker from an earlier install of this alias must not make a new install look READY.
+        new File(mPaths.doneFile(o.alias)).delete();
         writeKey(mPaths.rootKeyFile(o.alias), o.rootKey);
         writeKey(mPaths.userKeyFile(o.alias), o.userKey);
     }
@@ -74,13 +76,18 @@ public final class InstallStore {
     public List<InstallInfo> scan(Set<String> openSessionNames) {
         Set<String> sessions = openSessionNames == null ? Collections.<String>emptySet() : openSessionNames;
         TreeSet<String> aliases = new TreeSet<>();
-        File[] dirs = new File(mPaths.rootfsDir()).listFiles();
+        boolean listingFailed = false;
+        File rootfsDir = new File(mPaths.rootfsDir());
+        File[] dirs = rootfsDir.listFiles();
+        if (dirs == null && rootfsDir.exists()) listingFailed = true;
         if (dirs != null) {
             for (File f : dirs) {
                 if (f.isDirectory() && InputValidator.isValidAlias(f.getName())) aliases.add(f.getName());
             }
         }
-        File[] metas = new File(mPaths.metaDir()).listFiles();
+        File metaDir = new File(mPaths.metaDir());
+        File[] metas = metaDir.listFiles();
+        if (metas == null && metaDir.exists()) listingFailed = true;
         if (metas != null) {
             for (File f : metas) {
                 String n = f.getName();
@@ -102,7 +109,8 @@ public final class InstallStore {
             } else if (sessions.contains(alias)) {
                 status = InstallInfo.Status.INSTALLING;
             } else {
-                removeMetadata(alias);
+                // Never delete metadata when a listing failed: the rootfs may merely be unreadable.
+                if (!listingFailed) removeMetadata(alias);
                 continue;
             }
             Distro distro = null;

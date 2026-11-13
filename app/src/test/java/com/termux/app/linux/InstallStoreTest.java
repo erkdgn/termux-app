@@ -8,8 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,7 +71,7 @@ public class InstallStoreTest {
     @Test
     public void installingWhenSessionOpen() throws IOException {
         store.save(opts("u1", "", ""));
-        List<InstallInfo> l = store.scan(Set.of("u1"));
+        List<InstallInfo> l = store.scan(Collections.singleton("u1"));
         assertEquals(1, l.size());
         assertEquals(InstallInfo.Status.INSTALLING, l.get(0).status);
     }
@@ -139,5 +139,34 @@ public class InstallStoreTest {
         assertEquals(2, l.size());
         assertEquals("alpha", l.get(0).alias);
         assertEquals("zeta", l.get(1).alias);
+    }
+
+    @Test
+    public void unlistableRootfsKeepsMetadata() throws IOException {
+        Assume.assumeFalse("root can list unreadable dirs", "root".equals(System.getProperty("user.name")));
+        store.save(opts("u1", "k", ""));
+        mkRootfs("u1");
+        mkDone("u1");
+        File rootfs = new File(paths.rootfsDir());
+        assertTrue(rootfs.setReadable(false));
+        try {
+            assertNull(rootfs.listFiles());
+            store.scan(Collections.<String>emptySet());
+        } finally {
+            rootfs.setReadable(true);
+        }
+        assertTrue(new File(paths.metaFile("u1")).exists());
+        assertTrue(new File(paths.doneFile("u1")).exists());
+        assertTrue(new File(paths.rootKeyFile("u1")).exists());
+    }
+
+    @Test
+    public void saveClearsStaleDoneMarker() throws IOException {
+        assertTrue(new File(paths.metaDir()).mkdirs());
+        mkDone("u1");
+        store.save(opts("u1", "", ""));
+        assertFalse(new File(paths.doneFile("u1")).exists());
+        mkRootfs("u1");
+        assertEquals(InstallInfo.Status.INCOMPLETE, store.scan(null).get(0).status);
     }
 }
