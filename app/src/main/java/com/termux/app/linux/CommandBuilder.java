@@ -110,9 +110,16 @@ public final class CommandBuilder {
             + "'" + AND + "rm -f " + mPaths.pkgFailedFile(alias) + " || touch " + mPaths.pkgFailedFile(alias) + "\n";
     }
 
-    /** Returns "" when there is nothing to apply. */
+    /**
+     * Returns "" when there is nothing to apply.
+     *
+     * @throws IllegalArgumentException if SSH settings are applied with an invalid port or no mode
+     */
     public String applyEdit(String alias, String hostname, boolean sshChanged, boolean ssh, int port,
                             RootSshLogin mode, boolean hostnameChanged) {
+        if (sshChanged && ssh && (!InputValidator.isValidPort(port) || mode == null)) {
+            throw new IllegalArgumentException("ssh settings");
+        }
         StringBuilder steps = new StringBuilder();
         if (sshChanged && ssh) {
             steps.append("(command -v sshd >/dev/null || (apt-get update").append(AND)

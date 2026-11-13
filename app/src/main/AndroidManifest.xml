@@ -125,6 +125,14 @@
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
         <activity
+            android:name=".app.activities.LinuxInstallEditActivity"
+            android:exported="false"
+            android:parentActivityName=".app.activities.LinuxInstallDetailActivity"
+            android:label="@string/linux_edit_info"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
+        <activity
             android:name=".shared.activities.ReportActivity"
             android:theme="@style/Theme.MarkdownViewActivity.DayNight"
             android:documentLaunchMode="intoExisting" />

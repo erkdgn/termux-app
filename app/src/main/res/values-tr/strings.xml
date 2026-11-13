@@ -88,4 +88,10 @@
     <string name="linux_ssh_running">çalışıyor</string>
     <string name="linux_ssh_stopped">durdu</string>
     <string name="linux_install_not_found">Bu kurulum artık yok</string>
+    <string name="linux_user_existing_hint">Kurulumda zaten var olmalı</string>
+    <string name="linux_root_ssh_login">SSH ile root girişi</string>
+    <string name="linux_root_login_no">Hayır</string>
+    <string name="linux_root_login_key_only">Yalnız anahtar</string>
+    <string name="linux_root_login_password">Şifre ile</string>
+    <string name="linux_save">Kaydet</string>
 </resources>

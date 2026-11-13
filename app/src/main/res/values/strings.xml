@@ -324,4 +324,10 @@
     <string name="linux_ssh_running">running</string>
     <string name="linux_ssh_stopped">stopped</string>
     <string name="linux_install_not_found">This install no longer exists</string>
+    <string name="linux_user_existing_hint">Must already exist in the install</string>
+    <string name="linux_root_ssh_login">Root login over SSH</string>
+    <string name="linux_root_login_no">No</string>
+    <string name="linux_root_login_key_only">Key only</string>
+    <string name="linux_root_login_password">Password</string>
+    <string name="linux_save">Save</string>
 </resources>

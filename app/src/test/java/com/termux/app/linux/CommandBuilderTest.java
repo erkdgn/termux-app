@@ -224,6 +224,24 @@ public class CommandBuilderTest {
     }
 
     @Test
+    public void applyEditRejectsInvalidSshSettings() {
+        try {
+            b.applyEdit("u1", "", true, true, 80, RootSshLogin.NO, false);
+            fail();
+        } catch (IllegalArgumentException expected) {
+            // ok
+        }
+        try {
+            b.applyEdit("u1", "", true, true, 2022, null, false);
+            fail();
+        } catch (IllegalArgumentException expected) {
+            // ok
+        }
+        assertEquals("", b.applyEdit("u1", "", false, true, 80, null, false));
+        assertEquals("", b.applyEdit("u1", "", true, false, 80, null, false));
+    }
+
+    @Test
     public void applyEditNothing() {
         assertEquals("", b.applyEdit("u1", "", false, true, 2022, RootSshLogin.NO, false));
         assertEquals("", b.applyEdit("u1", "", true, false, 2022, RootSshLogin.NO, false));

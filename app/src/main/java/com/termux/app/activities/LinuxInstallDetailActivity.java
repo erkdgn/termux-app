@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -16,6 +17,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.termux.R;
@@ -54,6 +56,8 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
         R.string.linux_group_dev, R.string.linux_group_python, R.string.linux_group_nodejs,
         R.string.linux_group_nginx, R.string.linux_group_postgresql, R.string.linux_group_mariadb
     };
+
+    private static final int REQUEST_EDIT = 1;
 
     private InstallStore mStore;
     private CommandBuilder mCommands;
@@ -102,6 +106,20 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
         }
         mInfo = found;
         render();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_EDIT) return;
+        if (resultCode == RESULT_OK && data != null) {
+            setResult(RESULT_OK, data);
+            finish();
+        } else if (resultCode == RESULT_FIRST_USER) {
+            // Saved without a command to run: let the list refresh.
+            setResult(RESULT_FIRST_USER);
+            finish();
+        }
     }
 
     @Override
@@ -172,8 +190,12 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
         bind(R.id.linux_detail_delete, usable, v -> confirmDelete());
         bind(R.id.linux_detail_remove_from_list, notFound, v -> confirmRemoveFromList());
 
-        // Task 7: wire "Edit install info" to the edit activity and show it for non-NOT_FOUND, non-INSTALLING installs.
-        findViewById(R.id.linux_detail_edit_info).setVisibility(View.GONE);
+        bind(R.id.linux_detail_edit_info, usable, v -> {
+            Intent edit = new Intent(this, LinuxInstallEditActivity.class);
+            edit.putExtra(LinuxInstallEditActivity.EXTRA_ALIAS, info.alias);
+            edit.putExtra(SessionRequest.EXTRA_OPEN_SESSIONS, mOpenSessions.toArray(new String[0]));
+            startActivityForResult(edit, REQUEST_EDIT);
+        });
     }
 
     private void bind(int id, boolean visible, View.OnClickListener listener) {
