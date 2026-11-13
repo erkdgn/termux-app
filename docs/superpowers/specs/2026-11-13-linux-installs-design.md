@@ -186,12 +186,11 @@ tokens only, see Security.)
 - Public keys: the key text **never reaches the shell**. The app validates it
   and writes it to a staging file
   `~/.termux/linux-installs/<alias>.<root|user>.pub`; the typed chain only
-  references that fixed path, copying it into `/root/.ssh/authorized_keys` or
-  `/home/<user>/.ssh/authorized_keys` (dirs 700, file 600, owned by the
-  account) via `proot-distro login <alias> -- ...` with the Termux home
-  path, which proot-distro binds by default — the builder must verify that
-  bind; if absent, copy from `$PREFIX/var/lib/proot-distro/installed-rootfs/<alias>/`
-  side instead.
+  references that fixed path, copying it from the Termux side with
+  `install -D -m 600 <staging> <rootfs>/<home>/.ssh/authorized_keys`
+  (rootfs = `$PREFIX/var/lib/proot-distro/installed-rootfs/<alias>`), after
+  the user was created. No chown needed: under proot-distro files appear
+  root-owned, which sshd StrictModes accepts.
 - Key validation: one line matching
   `^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh.com) [A-Za-z0-9+/]+={0,3}( [A-Za-z0-9@._-]{1,64})?$`.
 - Interactive steps stay last: `passwd <user>` then `passwd root`. The chain
