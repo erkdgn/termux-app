@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Linux Manager -->
+    <string name="action_open_linux_manager">Linux Yöneticisi</string>
+    <string name="title_linux_manager">Linux Yöneticisi</string>
+    <string name="linux_manager_prepare_section">Hazırlık</string>
+    <string name="action_update_packages">Paketleri güncelle</string>
+    <string name="action_install_proot_distro">proot-distro kur</string>
+    <string name="action_setup_storage">Depolama izni ver</string>
+    <string name="linux_manager_distros_section">Dağıtımlar (proot-distro)</string>
+    <string name="action_install_ubuntu">Ubuntu kur</string>
+    <string name="action_refresh">Yenile</string>
+    <string name="action_install_xfce_vnc">Ubuntu\'ya XFCE + VNC kur</string>
+    <string name="linux_manager_no_distros">Henüz kurulu dağıtım yok. Başlamak için Ubuntu kurun.</string>
+    <string name="action_login_distro">Giriş</string>
+    <string name="action_backup_distro">Yedekle</string>
+    <string name="action_remove_distro">Sil</string>
+    <string name="linux_manager_servers_section">Sunucular</string>
+    <string name="action_add_custom_server">Özel sunucu ekle</string>
+    <string name="action_start">Başlat</string>
+    <string name="action_stop">Durdur</string>
+    <string name="action_delete">Sil</string>
+    <string name="server_status_running">Çalışıyor</string>
+    <string name="server_status_stopped">Durdu</string>
+    <string name="server_status_unknown">Bilinmiyor</string>
+    <string name="server_port_label">Port: %1$d</string>
+    <string name="server_name_ssh">SSH sunucusu (OpenSSH)</string>
+    <string name="server_desc_ssh">Gerekli: pkg install openssh · 8022 portunda dinler</string>
+    <string name="server_name_http_python">HTTP sunucusu (Python)</string>
+    <string name="server_desc_http_python">Gerekli: pkg install python · http://localhost:8080</string>
+    <string name="server_name_http_busybox">HTTP sunucusu (BusyBox)</string>
+    <string name="server_desc_http_busybox">Kurulum gerekmez · http://localhost:8081</string>
+    <string name="server_name_vnc">VNC sunucusu (Ubuntu/XFCE)</string>
+    <string name="server_desc_vnc">Önce Ubuntu içinde vncpasswd komutuyla şifre belirleyin · 127.0.0.1:5901 adresine bağlanın</string>
+    <string name="dialog_add_custom_server_title">Özel sunucu ekle</string>
+    <string name="hint_server_name">Ad</string>
+    <string name="hint_server_port">Port (isteğe bağlı)</string>
+    <string name="hint_server_start_command">Başlatma komutu</string>
+    <string name="hint_server_stop_command">Durdurma komutu</string>
+    <string name="hint_process_pattern">Süreç deseni (pgrep -f için)</string>
+    <string name="hint_server_description">Açıklama (isteğe bağlı)</string>
+    <string name="msg_distro_remove_confirm">%1$s dağıtımı ve tüm verileri silinsin mi?</string>
+    <string name="msg_server_started">%1$s için başlatma komutu gönderildi</string>
+    <string name="msg_server_stopped">%1$s için durdurma komutu gönderildi</string>
+    <string name="msg_custom_server_added">Özel sunucu eklendi</string>
+    <string name="error_custom_server_invalid">Ad, başlatma/durdurma komutları ve süreç deseni zorunludur</string>
+</resources>

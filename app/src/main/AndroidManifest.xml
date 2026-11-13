@@ -103,6 +103,14 @@
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
         <activity
+            android:name=".app.linux.LinuxManagerActivity"
+            android:exported="false"
+            android:label="@string/title_linux_manager"
+            android:parentActivityName=".app.TermuxActivity"
+            android:resizeableActivity="true"
+            tools:targetApi="n" />
+
+        <activity
             android:name=".shared.activities.ReportActivity"
             android:theme="@style/Theme.MarkdownViewActivity.DayNight"
             android:documentLaunchMode="intoExisting" />

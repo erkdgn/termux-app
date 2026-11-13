@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/linux_manager_prepare_section"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/button_update_packages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_update_packages" />
+
+        <Button
+            android:id="@+id/button_install_proot_distro"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_install_proot_distro" />
+
+        <Button
+            android:id="@+id/button_setup_storage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_setup_storage" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:text="@string/linux_manager_distros_section"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/button_install_ubuntu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/action_install_ubuntu" />
+
+            <Button
+                android:id="@+id/button_refresh"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/action_refresh" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/button_install_xfce_vnc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_install_xfce_vnc" />
+
+        <TextView
+            android:id="@+id/no_distros_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="@string/linux_manager_no_distros"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/distros_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:text="@string/linux_manager_servers_section"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/servers_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/button_add_custom_server"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_add_custom_server" />
+
+    </LinearLayout>
+</ScrollView>

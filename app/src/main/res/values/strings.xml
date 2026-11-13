@@ -235,4 +235,51 @@
     <!-- Donate Preference -->
     <string name="donate_preference_title">Donate</string>
 
+
+
+    <!-- Linux Manager -->
+    <string name="action_open_linux_manager">Linux Manager</string>
+    <string name="title_linux_manager">Linux Manager</string>
+    <string name="linux_manager_prepare_section">Preparation</string>
+    <string name="action_update_packages">Update packages</string>
+    <string name="action_install_proot_distro">Install proot-distro</string>
+    <string name="action_setup_storage">Grant storage access</string>
+    <string name="linux_manager_distros_section">Distributions (proot-distro)</string>
+    <string name="action_install_ubuntu">Install Ubuntu</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_install_xfce_vnc">Install XFCE + VNC in Ubuntu</string>
+    <string name="linux_manager_no_distros">No distribution installed yet. Install Ubuntu to get started.</string>
+    <string name="action_login_distro">Login</string>
+    <string name="action_backup_distro">Backup</string>
+    <string name="action_remove_distro">Remove</string>
+    <string name="linux_manager_servers_section">Servers</string>
+    <string name="action_add_custom_server">Add custom server</string>
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_delete">Delete</string>
+    <string name="server_status_running">Running</string>
+    <string name="server_status_stopped">Stopped</string>
+    <string name="server_status_unknown">Unknown</string>
+    <string name="server_port_label">Port: %1$d</string>
+    <string name="server_name_ssh">SSH server (OpenSSH)</string>
+    <string name="server_desc_ssh">Requires: pkg install openssh · listens on port 8022</string>
+    <string name="server_name_http_python">HTTP server (Python)</string>
+    <string name="server_desc_http_python">Requires: pkg install python · http://localhost:8080</string>
+    <string name="server_name_http_busybox">HTTP server (BusyBox)</string>
+    <string name="server_desc_http_busybox">No install needed · http://localhost:8081</string>
+    <string name="server_name_vnc">VNC server (Ubuntu/XFCE)</string>
+    <string name="server_desc_vnc">First set a password inside Ubuntu with the vncpasswd command · connect to 127.0.0.1:5901</string>
+    <string name="dialog_add_custom_server_title">Add custom server</string>
+    <string name="hint_server_name">Name</string>
+    <string name="hint_server_port">Port (optional)</string>
+    <string name="hint_server_start_command">Start command</string>
+    <string name="hint_server_stop_command">Stop command</string>
+    <string name="hint_process_pattern">Process pattern (for pgrep -f)</string>
+    <string name="hint_server_description">Description (optional)</string>
+    <string name="msg_distro_remove_confirm">Remove distribution %1$s and all of its data?</string>
+    <string name="msg_server_started">Start command sent for %1$s</string>
+    <string name="msg_server_stopped">Stop command sent for %1$s</string>
+    <string name="msg_custom_server_added">Custom server added</string>
+    <string name="error_custom_server_invalid">Name, start/stop commands and process pattern are required</string>
+
 </resources>
