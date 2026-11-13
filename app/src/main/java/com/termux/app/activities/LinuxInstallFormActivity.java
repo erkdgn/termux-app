@@ -24,14 +24,19 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.termux.R;
 import com.termux.app.linux.Distro;
+import com.termux.app.linux.DistroVersion;
 import com.termux.app.linux.InputValidator;
 import com.termux.app.linux.InstallOptions;
 import com.termux.app.linux.InstallStore;
 import com.termux.app.linux.LinuxPaths;
+import com.termux.app.linux.PackageGroup;
+import com.termux.app.linux.Timezones;
 import com.termux.shared.activity.media.AppCompatActivityUtils;
 import com.termux.shared.theme.NightMode;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 /**
  * Form for choosing the options of a new Linux (proot-distro) install. Started with
@@ -52,15 +57,36 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
     public static final String EXTRA_ROOT_PASSWORD = PREFIX + "ROOT_PASSWORD";
     public static final String EXTRA_ROOT_KEY = PREFIX + "ROOT_KEY";
     public static final String EXTRA_USER_KEY = PREFIX + "USER_KEY";
+    public static final String EXTRA_VERSION = PREFIX + "VERSION";
+    public static final String EXTRA_TIMEZONE = PREFIX + "TIMEZONE";
+    public static final String EXTRA_LOCALE_TR = PREFIX + "LOCALE_TR";
+    public static final String EXTRA_HOSTNAME = PREFIX + "HOSTNAME";
+    /** String[] of {@link PackageGroup} enum names. */
+    public static final String EXTRA_GROUPS = PREFIX + "GROUPS";
+    /** Parsed extra package tokens joined by a single space; empty when none. */
+    public static final String EXTRA_EXTRA_PACKAGES = PREFIX + "EXTRA_PACKAGES";
 
     private static final String STATE_ALIAS_EDITED = "alias_edited";
 
-    private Spinner mDistroSpinner;
-    private TextInputLayout mAliasLayout, mUserLayout, mPortLayout, mRootKeyLayout, mUserKeyLayout;
-    private TextInputEditText mAliasEdit, mUserEdit, mPortEdit, mRootKeyEdit, mUserKeyEdit;
-    private CheckBox mSudoCheck, mBasicToolsCheck, mSshCheck, mAutostartCheck, mRootPasswordCheck;
+    /** Check box ids, one per {@link PackageGroup} in enum order. */
+    private static final int[] GROUP_CHECK_IDS = {
+        R.id.linux_group_dev_check, R.id.linux_group_python_check, R.id.linux_group_nodejs_check,
+        R.id.linux_group_nginx_check, R.id.linux_group_postgresql_check, R.id.linux_group_mariadb_check
+    };
+
+    private Spinner mDistroSpinner, mVersionSpinner, mTimezoneSpinner;
+    private TextInputLayout mAliasLayout, mUserLayout, mPortLayout, mRootKeyLayout, mUserKeyLayout,
+        mHostnameLayout, mExtraPackagesLayout;
+    private TextInputEditText mAliasEdit, mUserEdit, mPortEdit, mRootKeyEdit, mUserKeyEdit,
+        mHostnameEdit, mExtraPackagesEdit;
+    private CheckBox mSudoCheck, mBasicToolsCheck, mSshCheck, mAutostartCheck, mRootPasswordCheck,
+        mLocaleTrCheck;
+    private final CheckBox[] mGroupChecks = new CheckBox[GROUP_CHECK_IDS.length];
     private View mSshGroup;
-    private TextView mSudoError, mSshError;
+    private TextView mSudoError, mSshError, mVersionError, mTimezoneError;
+    /** Versions shown in the version spinner, same order. */
+    private List<DistroVersion> mVersions = new ArrayList<>();
+    @Nullable private Distro mVersionsDistro;
     private Button mInstallButton;
 
     private InstallStore mStore;
@@ -104,6 +130,16 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         mUserKeyLayout = findViewById(R.id.linux_user_key_layout);
         mUserKeyEdit = findViewById(R.id.linux_user_key_edit);
         mInstallButton = findViewById(R.id.linux_install_button);
+        mVersionSpinner = findViewById(R.id.linux_version_spinner);
+        mVersionError = findViewById(R.id.linux_version_error);
+        mTimezoneSpinner = findViewById(R.id.linux_timezone_spinner);
+        mTimezoneError = findViewById(R.id.linux_timezone_error);
+        mLocaleTrCheck = findViewById(R.id.linux_locale_tr_check);
+        mHostnameLayout = findViewById(R.id.linux_hostname_layout);
+        mHostnameEdit = findViewById(R.id.linux_hostname_edit);
+        mExtraPackagesLayout = findViewById(R.id.linux_extra_packages_layout);
+        mExtraPackagesEdit = findViewById(R.id.linux_extra_packages_edit);
+        for (int i = 0; i < GROUP_CHECK_IDS.length; i++) mGroupChecks[i] = findViewById(GROUP_CHECK_IDS[i]);
 
         Distro[] distros = Distro.values();
         String[] labels = new String[distros.length];
@@ -112,6 +148,17 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mDistroSpinner.setAdapter(adapter);
         mDistroSpinner.setSelection(Distro.UBUNTU.ordinal());
+
+        rebuildVersions(Distro.UBUNTU);
+
+        // First item is "image default" (empty value), followed by the fixed timezone list.
+        List<String> tzLabels = new ArrayList<>();
+        tzLabels.add(getString(R.string.linux_timezone_default));
+        tzLabels.addAll(Timezones.all());
+        ArrayAdapter<String> tzAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, tzLabels);
+        tzAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mTimezoneSpinner.setAdapter(tzAdapter);
+        mTimezoneSpinner.setSelection(1 + Timezones.all().indexOf(Timezones.DEFAULT));
 
         if (savedInstanceState == null) {
             mPortEdit.setText(String.valueOf(InputValidator.DEFAULT_PORT));
@@ -122,12 +169,25 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (!mAliasEdited) setAlias(selectedDistro().id());
+                rebuildVersions(selectedDistro());
                 update();
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
+
+        AdapterView.OnItemSelectedListener updateSelectionListener = new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                update();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        };
+        mVersionSpinner.setOnItemSelectedListener(updateSelectionListener);
+        mTimezoneSpinner.setOnItemSelectedListener(updateSelectionListener);
 
         mAliasEdit.addTextChangedListener(new SimpleWatcher() {
             @Override
@@ -146,6 +206,8 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         mPortEdit.addTextChangedListener(updateWatcher);
         mRootKeyEdit.addTextChangedListener(updateWatcher);
         mUserKeyEdit.addTextChangedListener(updateWatcher);
+        mHostnameEdit.addTextChangedListener(updateWatcher);
+        mExtraPackagesEdit.addTextChangedListener(updateWatcher);
 
         CompoundButtonListener checkListener = new CompoundButtonListener();
         mSudoCheck.setOnCheckedChangeListener(checkListener);
@@ -153,6 +215,8 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         mSshCheck.setOnCheckedChangeListener(checkListener);
         mAutostartCheck.setOnCheckedChangeListener(checkListener);
         mRootPasswordCheck.setOnCheckedChangeListener(checkListener);
+        mLocaleTrCheck.setOnCheckedChangeListener(checkListener);
+        for (CheckBox c : mGroupChecks) c.setOnCheckedChangeListener(checkListener);
 
         // Phantom process killer only exists on Android 12+ (API 31).
         if (Build.VERSION.SDK_INT >= 31) {
@@ -180,7 +244,7 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
     /** Rebuilds {@link InstallOptions} from the form, shows errors and enables Install when valid. */
     private void update() {
         // Fields are created in onCreate in order; listeners may fire before all are set up.
-        if (mInstallButton == null || mUserKeyEdit == null) return;
+        if (mInstallButton == null || mExtraPackagesEdit == null) return;
 
         String user = text(mUserEdit).trim();
         boolean hasUser = !user.isEmpty();
@@ -209,10 +273,30 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         }
 
         String alias = text(mAliasEdit).trim();
-        InstallOptions options = new InstallOptions(selectedDistro(), alias, user,
-            hasUser && mSudoCheck.isChecked(), mBasicToolsCheck.isChecked(),
-            ssh, port, ssh && mAutostartCheck.isChecked(), mRootPasswordCheck.isChecked(),
-            rootKey, userKey);
+        EnumSet<PackageGroup> groups = EnumSet.noneOf(PackageGroup.class);
+        PackageGroup[] allGroups = PackageGroup.values();
+        for (int i = 0; i < allGroups.length && i < mGroupChecks.length; i++) {
+            if (mGroupChecks[i].isChecked()) groups.add(allGroups[i]);
+        }
+        InstallOptions options = new InstallOptions.Builder()
+            .distro(selectedDistro())
+            .version(selectedVersion())
+            .alias(alias)
+            .user(user)
+            .sudo(hasUser && mSudoCheck.isChecked())
+            .basicTools(mBasicToolsCheck.isChecked())
+            .ssh(ssh)
+            .sshPort(port)
+            .sshAutoStart(ssh && mAutostartCheck.isChecked())
+            .rootPassword(mRootPasswordCheck.isChecked())
+            .rootKey(rootKey)
+            .userKey(userKey)
+            .timezone(selectedTimezone())
+            .localeTr(mLocaleTrCheck.isChecked())
+            .hostname(text(mHostnameEdit).trim())
+            .groups(groups)
+            .extraPackages(packagesOrRawTokens(text(mExtraPackagesEdit)))
+            .build();
 
         EnumSet<InputValidator.Error> errors = InputValidator.validate(options);
         boolean aliasTaken = !errors.contains(InputValidator.Error.ALIAS) && mStore.isAliasTaken(alias);
@@ -237,6 +321,15 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         if (errors.contains(InputValidator.Error.USER_KEY_WITHOUT_USER)) {
             mUserKeyLayout.setError(getString(R.string.linux_error_user_key_without_user));
         }
+        mHostnameLayout.setError(errors.contains(InputValidator.Error.HOSTNAME)
+            ? getString(R.string.linux_error_hostname) : null);
+        mExtraPackagesLayout.setError(errors.contains(InputValidator.Error.PACKAGES)
+            ? getString(R.string.linux_error_packages) : null);
+        // Spinners only offer valid values, so these are a safety net.
+        setInlineError(mVersionError, errors.contains(InputValidator.Error.VERSION)
+            ? getString(R.string.linux_error_version) : null);
+        setInlineError(mTimezoneError, errors.contains(InputValidator.Error.TIMEZONE)
+            ? getString(R.string.linux_error_timezone) : null);
 
         boolean valid = errors.isEmpty() && !aliasTaken;
         mCurrentOptions = valid ? options : null;
@@ -260,6 +353,20 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         result.putExtra(EXTRA_ROOT_PASSWORD, o.rootPassword);
         result.putExtra(EXTRA_ROOT_KEY, o.rootKey);
         result.putExtra(EXTRA_USER_KEY, o.userKey);
+        result.putExtra(EXTRA_VERSION, o.version.id());
+        result.putExtra(EXTRA_TIMEZONE, o.timezone);
+        result.putExtra(EXTRA_LOCALE_TR, o.localeTr);
+        result.putExtra(EXTRA_HOSTNAME, o.hostname);
+        String[] groupNames = new String[o.groups.size()];
+        int gi = 0;
+        for (PackageGroup g : o.groups) groupNames[gi++] = g.name();
+        result.putExtra(EXTRA_GROUPS, groupNames);
+        StringBuilder pkgs = new StringBuilder();
+        for (String p : o.extraPackages) {
+            if (pkgs.length() > 0) pkgs.append(' ');
+            pkgs.append(p);
+        }
+        result.putExtra(EXTRA_EXTRA_PACKAGES, pkgs.toString());
         setResult(RESULT_OK, result);
         finish();
     }
@@ -270,17 +377,78 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         if (data == null) return null;
         Distro distro = Distro.fromId(data.getStringExtra(EXTRA_DISTRO));
         if (distro == null) return null;
-        return new InstallOptions(distro,
-            data.getStringExtra(EXTRA_ALIAS),
-            data.getStringExtra(EXTRA_USER),
-            data.getBooleanExtra(EXTRA_SUDO, false),
-            data.getBooleanExtra(EXTRA_BASIC_TOOLS, false),
-            data.getBooleanExtra(EXTRA_SSH, false),
-            data.getIntExtra(EXTRA_SSH_PORT, InputValidator.DEFAULT_PORT),
-            data.getBooleanExtra(EXTRA_SSH_AUTOSTART, false),
-            data.getBooleanExtra(EXTRA_ROOT_PASSWORD, false),
-            data.getStringExtra(EXTRA_ROOT_KEY),
-            data.getStringExtra(EXTRA_USER_KEY));
+        // A missing version means the distro default; a present but unknown one is rejected.
+        String versionId = data.getStringExtra(EXTRA_VERSION);
+        DistroVersion version = versionId == null
+            ? DistroVersion.defaultFor(distro) : DistroVersion.fromId(distro, versionId);
+        if (version == null) return null;
+
+        EnumSet<PackageGroup> groups = EnumSet.noneOf(PackageGroup.class);
+        String[] groupNames = data.getStringArrayExtra(EXTRA_GROUPS);
+        if (groupNames != null) {
+            for (String name : groupNames) {
+                PackageGroup g = PackageGroup.fromName(name);
+                if (g == null) return null;
+                groups.add(g);
+            }
+        }
+
+        return new InstallOptions.Builder()
+            .distro(distro)
+            .version(version)
+            .alias(data.getStringExtra(EXTRA_ALIAS))
+            .user(data.getStringExtra(EXTRA_USER))
+            .sudo(data.getBooleanExtra(EXTRA_SUDO, false))
+            .basicTools(data.getBooleanExtra(EXTRA_BASIC_TOOLS, false))
+            .ssh(data.getBooleanExtra(EXTRA_SSH, false))
+            .sshPort(data.getIntExtra(EXTRA_SSH_PORT, InputValidator.DEFAULT_PORT))
+            .sshAutoStart(data.getBooleanExtra(EXTRA_SSH_AUTOSTART, false))
+            .rootPassword(data.getBooleanExtra(EXTRA_ROOT_PASSWORD, false))
+            .rootKey(data.getStringExtra(EXTRA_ROOT_KEY))
+            .userKey(data.getStringExtra(EXTRA_USER_KEY))
+            .timezone(data.getStringExtra(EXTRA_TIMEZONE))
+            .localeTr(data.getBooleanExtra(EXTRA_LOCALE_TR, false))
+            .hostname(data.getStringExtra(EXTRA_HOSTNAME))
+            .groups(groups)
+            .extraPackages(packagesOrRawTokens(data.getStringExtra(EXTRA_EXTRA_PACKAGES)))
+            .build();
+    }
+
+    /**
+     * Parsed package tokens, or, when parsing fails, the raw whitespace-split tokens so that
+     * {@link InputValidator#validate(InstallOptions)} still reports PACKAGES.
+     */
+    private static List<String> packagesOrRawTokens(@Nullable String raw) {
+        List<String> parsed = InputValidator.parsePackages(raw);
+        if (parsed != null) return parsed;
+        List<String> tokens = new ArrayList<>();
+        for (String t : raw.trim().split("\\s+")) tokens.add(t);
+        return tokens;
+    }
+
+    /** Fills the version spinner for the distro with its default preselected; no-op if already shown. */
+    private void rebuildVersions(Distro distro) {
+        if (distro == mVersionsDistro) return;
+        mVersionsDistro = distro;
+        mVersions = new ArrayList<>(DistroVersion.forDistro(distro));
+        String[] labels = new String[mVersions.size()];
+        for (int i = 0; i < labels.length; i++) labels[i] = mVersions.get(i).label();
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mVersionSpinner.setAdapter(adapter);
+        mVersionSpinner.setSelection(Math.max(0, mVersions.indexOf(DistroVersion.defaultFor(distro))));
+    }
+
+    private DistroVersion selectedVersion() {
+        int pos = mVersionSpinner.getSelectedItemPosition();
+        return pos >= 0 && pos < mVersions.size() ? mVersions.get(pos) : DistroVersion.defaultFor(selectedDistro());
+    }
+
+    /** Empty string for "image default". */
+    private String selectedTimezone() {
+        int pos = mTimezoneSpinner.getSelectedItemPosition();
+        List<String> all = Timezones.all();
+        return pos >= 1 && pos <= all.size() ? all.get(pos - 1) : "";
     }
 
     private void openDeveloperOptions() {

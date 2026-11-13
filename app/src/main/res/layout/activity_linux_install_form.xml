@@ -130,6 +130,128 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/linux_version"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            <Spinner
+                android:id="@+id/linux_version_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp" />
+
+            <TextView
+                android:id="@+id/linux_version_error"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorError"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:visibility="gone" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/linux_timezone"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            <Spinner
+                android:id="@+id/linux_timezone_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp" />
+
+            <TextView
+                android:id="@+id/linux_timezone_error"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorError"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:visibility="gone" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_locale_tr_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_locale_tr" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/linux_hostname_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/linux_hostname">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/linux_hostname_edit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textNoSuggestions"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/linux_packages"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_group_dev_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_group_dev" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_group_python_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_group_python" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_group_nodejs_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_group_nodejs" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_group_nginx_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_group_nginx" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_group_postgresql_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_group_postgresql" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/linux_group_mariadb_check"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/linux_group_mariadb" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/linux_extra_packages_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/linux_extra_packages">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/linux_extra_packages_edit"
+                    android:hint="@string/linux_extra_packages_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textNoSuggestions"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="@string/linux_root_access"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
