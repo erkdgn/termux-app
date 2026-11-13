@@ -83,6 +83,22 @@ public class CommandBuilderTest {
     }
 
     @Test
+    public void utcTimezoneUsesEtcUtc() {
+        String c = b.install(ub().timezone("UTC").build());
+        assertTrue(c, c.contains("ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime && echo Etc/UTC > /etc/timezone"));
+        assertFalse(c, c.contains("zoneinfo/UTC "));
+    }
+
+    @Test
+    public void localeWritesProfileDForBothDistros() {
+        String u = b.install(ub().localeTr(true).build());
+        String d = b.install(new InstallOptions.Builder().distro(Distro.DEBIAN).alias("d1").localeTr(true).build());
+        String line = "echo \"export LANG=tr_TR.UTF-8\" > /etc/profile.d/locale-tr.sh";
+        assertTrue(u, u.contains(line));
+        assertTrue(d, d.contains(line));
+    }
+
+    @Test
     public void localeDebianUsesLocaleGen() {
         String c = b.install(new InstallOptions.Builder().distro(Distro.DEBIAN).alias("d1").localeTr(true).build());
         assertTrue(c, c.contains("sed -i \"s/^# *tr_TR.UTF-8 UTF-8/tr_TR.UTF-8 UTF-8/\" /etc/locale.gen"

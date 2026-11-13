@@ -49,6 +49,9 @@ public class LinuxInstallEditActivity extends AppCompatActivity {
 
     public static final String EXTRA_ALIAS = "com.termux.linux.extra.ALIAS";
 
+    private static final String STATE_DISTRO = "distro";
+    private static final String STATE_VERSION_ID = "version_id";
+
     /** Labels of {@link RootSshLogin} values in enum order. */
     private static final int[] ROOT_LOGIN_LABELS = {
         R.string.linux_root_login_no, R.string.linux_root_login_key_only, R.string.linux_root_login_password
@@ -131,21 +134,30 @@ public class LinuxInstallEditActivity extends AppCompatActivity {
         for (int label : ROOT_LOGIN_LABELS) rootLabels.add(getString(label));
         mRootLoginSpinner.setAdapter(adapter(rootLabels));
 
-        // Prefill from the loaded info (only on first creation; Android restores view state itself).
         final InstallInfo info = mInfo;
-        mDistroSpinner.setSelection(info.distro == null ? 0 : 1 + info.distro.ordinal());
-        rebuildVersions(info.distro);
-        if (info.version != null) {
-            int idx = mVersions.indexOf(info.version);
-            mVersionSpinner.setSelection(idx < 0 ? 0 : 1 + idx);
+        if (savedInstanceState != null) {
+            // Rotation: Android restores the field values; rebuild the version list for the saved choice.
+            int distroPos = savedInstanceState.getInt(STATE_DISTRO, 0);
+            mDistroSpinner.setSelection(distroPos);
+            Distro d = distroPos <= 0 || distroPos > distros.length ? null : distros[distroPos - 1];
+            rebuildVersions(d);
+            selectVersionById(savedInstanceState.getString(STATE_VERSION_ID));
+        } else {
+            // Prefill from the loaded info.
+            mDistroSpinner.setSelection(info.distro == null ? 0 : 1 + info.distro.ordinal());
+            rebuildVersions(info.distro);
+            if (info.version != null) {
+                int idx = mVersions.indexOf(info.version);
+                mVersionSpinner.setSelection(idx < 0 ? 0 : 1 + idx);
+            }
+            mUserEdit.setText(info.user);
+            mHostnameEdit.setText(info.hostname);
+            mSshCheck.setChecked(info.ssh);
+            mSshGroup.setVisibility(info.ssh ? View.VISIBLE : View.GONE);
+            mPortEdit.setText(String.valueOf(info.sshPort == 0 ? InputValidator.DEFAULT_PORT : info.sshPort));
+            mAutostartCheck.setChecked(info.sshAutoStart);
+            mRootLoginSpinner.setSelection(info.rootSshLogin.ordinal());
         }
-        mUserEdit.setText(info.user);
-        mHostnameEdit.setText(info.hostname);
-        mSshCheck.setChecked(info.ssh);
-        mSshGroup.setVisibility(info.ssh ? View.VISIBLE : View.GONE);
-        mPortEdit.setText(String.valueOf(info.sshPort == 0 ? InputValidator.DEFAULT_PORT : info.sshPort));
-        mAutostartCheck.setChecked(info.sshAutoStart);
-        mRootLoginSpinner.setSelection(info.rootSshLogin.ordinal());
 
         mDistroSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -162,6 +174,25 @@ public class LinuxInstallEditActivity extends AppCompatActivity {
             mSshGroup.setVisibility(checked ? View.VISIBLE : View.GONE));
 
         findViewById(R.id.linux_edit_save_button).setOnClickListener(v -> save());
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (mDistroSpinner == null) return;
+        outState.putInt(STATE_DISTRO, mDistroSpinner.getSelectedItemPosition());
+        DistroVersion v = selectedVersion();
+        if (v != null) outState.putString(STATE_VERSION_ID, v.id());
+    }
+
+    private void selectVersionById(@Nullable String id) {
+        if (id == null) return;
+        for (int i = 0; i < mVersions.size(); i++) {
+            if (mVersions.get(i).id().equals(id)) {
+                mVersionSpinner.setSelection(1 + i);
+                return;
+            }
+        }
     }
 
     @Override
@@ -238,6 +269,9 @@ public class LinuxInstallEditActivity extends AppCompatActivity {
         boolean hostnameChanged = !hostname.equals(old.hostname);
         int oldPort = old.sshPort == 0 ? InputValidator.DEFAULT_PORT : old.sshPort;
         boolean sshChanged = ssh != old.ssh || port != oldPort || mode != old.rootSshLogin;
+        if (sshChanged && mOpenSessions.contains(SessionNames.ssh(mAlias))) {
+            Toast.makeText(this, R.string.linux_restart_ssh_hint, Toast.LENGTH_LONG).show();
+        }
         String command = mCommands.applyEdit(mAlias, hostname, sshChanged, ssh, port, mode, hostnameChanged);
         if (command.isEmpty()) {
             setResult(RESULT_FIRST_USER);

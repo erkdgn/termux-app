@@ -67,6 +67,7 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
     public static final String EXTRA_EXTRA_PACKAGES = PREFIX + "EXTRA_PACKAGES";
 
     private static final String STATE_ALIAS_EDITED = "alias_edited";
+    private static final String STATE_VERSION_ID = "version_id";
 
     /** Check box ids, one per {@link PackageGroup} in enum order. */
     private static final int[] GROUP_CHECK_IDS = {
@@ -87,6 +88,8 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
     /** Versions shown in the version spinner, same order. */
     private List<DistroVersion> mVersions = new ArrayList<>();
     @Nullable private Distro mVersionsDistro;
+    /** Version id restored after rotation, applied once the matching version list is built. */
+    @Nullable private String mPendingVersionId;
     private Button mInstallButton;
 
     private InstallStore mStore;
@@ -108,7 +111,10 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         setTitle(R.string.linux_form_title);
 
         mStore = new InstallStore(LinuxPaths.defaults());
-        if (savedInstanceState != null) mAliasEdited = savedInstanceState.getBoolean(STATE_ALIAS_EDITED);
+        if (savedInstanceState != null) {
+            mAliasEdited = savedInstanceState.getBoolean(STATE_ALIAS_EDITED);
+            mPendingVersionId = savedInstanceState.getString(STATE_VERSION_ID);
+        }
 
         mDistroSpinner = findViewById(R.id.linux_distro_spinner);
         mAliasLayout = findViewById(R.id.linux_alias_layout);
@@ -233,6 +239,8 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(STATE_ALIAS_EDITED, mAliasEdited);
+        DistroVersion v = selectedVersion();
+        if (v != null) outState.putString(STATE_VERSION_ID, v.id());
     }
 
     @Override
@@ -436,7 +444,17 @@ public class LinuxInstallFormActivity extends AppCompatActivity {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mVersionSpinner.setAdapter(adapter);
-        mVersionSpinner.setSelection(Math.max(0, mVersions.indexOf(DistroVersion.defaultFor(distro))));
+        int selection = Math.max(0, mVersions.indexOf(DistroVersion.defaultFor(distro)));
+        if (mPendingVersionId != null) {
+            for (int i = 0; i < mVersions.size(); i++) {
+                if (mVersions.get(i).id().equals(mPendingVersionId)) {
+                    selection = i;
+                    mPendingVersionId = null;
+                    break;
+                }
+            }
+        }
+        mVersionSpinner.setSelection(selection);
     }
 
     private DistroVersion selectedVersion() {

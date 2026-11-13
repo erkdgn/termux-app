@@ -68,6 +68,7 @@
     <string name="linux_delete_confirm">%1$s silinsin mi? Bu işlem geri alınamaz.</string>
     <string name="linux_close_sessions_first">Önce bu kurulumun oturumlarını kapatın</string>
     <string name="linux_save_failed">Kurulum ayarları kaydedilemedi</string>
+    <string name="linux_restart_ssh_hint">Yeni ayarlar için SSH\'yi yeniden başlatın</string>
     <string name="linux_install_invalid">Bu kurulum geçerli değil veya adı zaten kullanılıyor</string>
     <string name="linux_open_installs">Linux kurulumları</string>
     <string name="linux_cancel">İptal</string>

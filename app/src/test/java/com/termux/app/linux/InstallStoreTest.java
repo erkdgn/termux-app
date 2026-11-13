@@ -281,9 +281,34 @@ public class InstallStoreTest {
         assertEquals("", i.hostname);
         assertEquals("", i.timezone);
         assertFalse(i.localeTr);
-        assertEquals(RootSshLogin.KEY_ONLY, i.rootSshLogin);
+        assertEquals(RootSshLogin.NO, i.rootSshLogin);
         assertEquals("bob", i.user);
+        assertTrue(i.ssh);
+        assertEquals(2022, i.sshPort);
         assertTrue(i.hasMetadata);
+    }
+
+    @Test
+    public void v1MissingRootSshLoginDerived() throws IOException {
+        writeProps("p1", "distro=ubuntu\nrootPassword=true\n");
+        mkRootfs("p1");
+        writeProps("k1", "distro=ubuntu\nrootPassword=false\n");
+        mkRootfs("k1");
+        Files.write(new File(paths.rootKeyFile("k1")).toPath(), "ssh-ed25519 AAAA x@y\n".getBytes(StandardCharsets.UTF_8));
+        writeProps("n1", "distro=ubuntu\n");
+        mkRootfs("n1");
+        for (InstallInfo i : store.scan(null)) {
+            if (i.alias.equals("p1")) assertEquals(RootSshLogin.PASSWORD, i.rootSshLogin);
+            else if (i.alias.equals("k1")) assertEquals(RootSshLogin.KEY_ONLY, i.rootSshLogin);
+            else assertEquals(RootSshLogin.NO, i.rootSshLogin);
+        }
+    }
+
+    @Test
+    public void rootfsOnlyHasNoMetadata() throws IOException {
+        mkRootfs("r1");
+        InstallInfo i = store.scan(null).get(0);
+        assertFalse(i.hasMetadata);
     }
 
     @Test
@@ -316,7 +341,7 @@ public class InstallStoreTest {
         assertEquals("", i.user);
         assertEquals(EnumSet.of(PackageGroup.PYTHON), i.groups);
         assertEquals(Arrays.asList("htop"), i.extraPackages);
-        assertEquals(RootSshLogin.KEY_ONLY, i.rootSshLogin);
+        assertEquals(RootSshLogin.NO, i.rootSshLogin);
         assertNull(i.version);
         assertEquals(0, i.sshPort);
     }

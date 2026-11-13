@@ -51,11 +51,18 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_ALIAS = "com.termux.linux.extra.ALIAS";
 
-    /** Labels of the package groups, one per {@link PackageGroup} in enum order. */
-    private static final int[] GROUP_LABELS = {
-        R.string.linux_group_dev, R.string.linux_group_python, R.string.linux_group_nodejs,
-        R.string.linux_group_nginx, R.string.linux_group_postgresql, R.string.linux_group_mariadb
-    };
+    /** Label of a package group; a switch so a new enum value cannot index out of range. */
+    private static int groupLabel(PackageGroup g) {
+        switch (g) {
+            case DEV: return R.string.linux_group_dev;
+            case PYTHON: return R.string.linux_group_python;
+            case NODEJS: return R.string.linux_group_nodejs;
+            case NGINX: return R.string.linux_group_nginx;
+            case POSTGRESQL: return R.string.linux_group_postgresql;
+            case MARIADB: return R.string.linux_group_mariadb;
+            default: return R.string.linux_unknown_distro;
+        }
+    }
 
     private static final int REQUEST_EDIT = 1;
 
@@ -299,7 +306,7 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
         final CheckBox[] checks = new CheckBox[groups.length];
         for (int i = 0; i < groups.length; i++) {
             checks[i] = new CheckBox(this);
-            checks[i].setText(GROUP_LABELS[i]);
+            checks[i].setText(groupLabel(groups[i]));
             groupsView.addView(checks[i]);
         }
 

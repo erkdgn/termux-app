@@ -172,7 +172,8 @@ public class LinuxInstallsActivity extends AppCompatActivity {
             ((TextView) row.findViewById(R.id.linux_item_name)).setText(info.alias);
 
             StringBuilder details = new StringBuilder();
-            details.append(info.distro != null ? info.distro.label() : getString(R.string.linux_unknown_distro));
+            details.append(info.version != null ? info.version.label()
+                : info.distro != null ? info.distro.label() : getString(R.string.linux_unknown_distro));
             if (InputValidator.isValidUser(info.user)) details.append(" · ").append(info.user);
             if (info.ssh) details.append(" · ").append(getString(R.string.linux_ssh_port_label, info.sshPort));
             ((TextView) row.findViewById(R.id.linux_item_details)).setText(details);

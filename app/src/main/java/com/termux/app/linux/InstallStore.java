@@ -184,14 +184,14 @@ public final class InstallStore {
             InstallInfo.Builder b = new InstallInfo.Builder().alias(alias).status(status).failed(failed)
                 .packagesFailed(new File(mPaths.pkgFailedFile(alias)).exists())
                 .hasMetadata(new File(mPaths.metaFile(alias)).isFile());
-            if (p != null) fill(b, p);
+            if (p != null) fill(b, p, alias);
             result.add(b.build());
         }
         return result;
     }
 
     /** Copies metadata into the builder, re-validating every value. */
-    private static void fill(InstallInfo.Builder b, Properties p) {
+    private void fill(InstallInfo.Builder b, Properties p, String alias) {
         Distro distro = Distro.fromId(p.getProperty("distro"));
         b.distro(distro);
         if (distro != null) b.version(DistroVersion.fromId(distro, p.getProperty("version")));
@@ -212,7 +212,13 @@ public final class InstallStore {
         }
         b.sshPort(InputValidator.isValidPort(port) ? port : 0);
         RootSshLogin login = RootSshLogin.fromName(p.getProperty("rootSshLogin"));
-        b.rootSshLogin(login == null ? RootSshLogin.KEY_ONLY : login);
+        if (login == null) {
+            // v1 metadata has no rootSshLogin: derive it like InstallOptions.rootSshLogin() does.
+            if (Boolean.parseBoolean(p.getProperty("rootPassword"))) login = RootSshLogin.PASSWORD;
+            else if (new File(mPaths.rootKeyFile(alias)).isFile()) login = RootSshLogin.KEY_ONLY;
+            else login = RootSshLogin.NO;
+        }
+        b.rootSshLogin(login);
         Set<PackageGroup> groups = EnumSet.noneOf(PackageGroup.class);
         String g = p.getProperty("groups", "").trim();
         if (!g.isEmpty()) {

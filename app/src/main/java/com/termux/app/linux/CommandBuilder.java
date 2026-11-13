@@ -9,8 +9,11 @@ import java.util.Set;
 /**
  * Builds the shell command lines that are typed into a Termux terminal session.
  *
- * <p>Callers must pass {@link InstallOptions} that already passed {@link InputValidator#validate};
- * this class does not re-validate. Only validated tokens (alias, user, port, distro id) and fixed
+ * <p>Only a few inputs are re-validated here and throw {@link IllegalArgumentException}: the
+ * hostname, formatted labels, the package tokens of {@code installPackages}, and the SSH port and
+ * mode of {@code applyEdit}. All other inputs (for example the {@link InstallOptions} given to
+ * {@code install}, which must already have passed {@link InputValidator#validate}, and aliases and
+ * users) must come pre-validated. Only validated tokens (alias, user, port, distro id) and fixed
  * paths are emitted. Key text is never part of a command: keys are copied from staging files.
  * Every returned command ends with a newline (except {@link #SSH_STOP}).
  */
@@ -209,8 +212,10 @@ public final class CommandBuilder {
         }
 
         if (!o.timezone.isEmpty()) {
-            sb.append(AND).append("ln -sf /usr/share/zoneinfo/").append(o.timezone).append(" /etc/localtime")
-                .append(AND).append("echo ").append(o.timezone).append(" > /etc/timezone");
+            // The stored id stays "UTC", but the zoneinfo database only ships it as Etc/UTC.
+            String zone = o.timezone.equals("UTC") ? "Etc/UTC" : o.timezone;
+            sb.append(AND).append("ln -sf /usr/share/zoneinfo/").append(zone).append(" /etc/localtime")
+                .append(AND).append("echo ").append(zone).append(" > /etc/timezone");
         }
         if (o.localeTr) {
             if (o.distro == Distro.UBUNTU) {
@@ -219,6 +224,9 @@ public final class CommandBuilder {
                 sb.append(AND).append("sed -i \"s/^# *tr_TR.UTF-8 UTF-8/tr_TR.UTF-8 UTF-8/\" /etc/locale.gen")
                     .append(AND).append("locale-gen").append(AND).append("update-locale LANG=tr_TR.UTF-8");
             }
+        }
+        if (o.localeTr) {
+            sb.append(AND).append("echo \"export LANG=tr_TR.UTF-8\" > /etc/profile.d/locale-tr.sh");
         }
         if (!o.hostname.isEmpty()) {
             sb.append(AND).append(hostsLine(o.hostname));
