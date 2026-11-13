@@ -62,10 +62,6 @@ public final class CommandBuilder {
         return "exec proot-distro login " + alias + " -- /usr/sbin/sshd -D -e\n";
     }
 
-    public static String sshSessionName(String alias) {
-        return alias + "-ssh";
-    }
-
     public String backup(String alias, boolean downloadsAvailable, String timestamp) {
         String dir = downloadsAvailable ? mPaths.homeDir() + "/storage/downloads" : mPaths.homeDir();
         return "proot-distro backup --output " + dir + "/" + alias + "-" + timestamp + ".tar.gz " + alias + "\n";

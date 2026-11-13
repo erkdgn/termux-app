@@ -71,9 +71,27 @@ public class InstallStoreTest {
     @Test
     public void installingWhenSessionOpen() throws IOException {
         store.save(opts("u1", "", ""));
-        List<InstallInfo> l = store.scan(Collections.singleton("u1"));
+        List<InstallInfo> l = store.scan(Collections.singleton(SessionNames.install("u1")));
         assertEquals(1, l.size());
         assertEquals(InstallInfo.Status.INSTALLING, l.get(0).status);
+    }
+
+    @Test
+    public void installingEvenWhenRootfsExists() throws IOException {
+        store.save(opts("u1", "", ""));
+        mkRootfs("u1");
+        List<InstallInfo> l = store.scan(Collections.singleton(SessionNames.install("u1")));
+        assertEquals(1, l.size());
+        assertEquals(InstallInfo.Status.INSTALLING, l.get(0).status);
+    }
+
+    @Test
+    public void plainAliasSessionIsNotInstalling() throws IOException {
+        store.save(opts("u1", "", ""));
+        mkRootfs("u1");
+        List<InstallInfo> l = store.scan(Collections.singleton("u1"));
+        assertEquals(1, l.size());
+        assertEquals(InstallInfo.Status.INCOMPLETE, l.get(0).status);
     }
 
     @Test

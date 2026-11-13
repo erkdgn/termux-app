@@ -116,7 +116,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
         InstallOptions o = LinuxInstallFormActivity.optionsFromIntent(data);
         // Defence in depth: the form already validated, but the state may have changed meanwhile.
         if (o == null || !InputValidator.validate(o).isEmpty() || mStore.isAliasTaken(o.alias)
-            || mOpenSessions.contains(o.alias)) {
+            || mOpenSessions.contains(SessionNames.install(o.alias))) {
             Toast.makeText(this, R.string.linux_install_invalid, Toast.LENGTH_LONG).show();
             return;
         }
@@ -126,8 +126,8 @@ public class LinuxInstallsActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.linux_save_failed, Toast.LENGTH_LONG).show();
             return;
         }
-        // The install runs in a session named exactly like the alias; InstallStore.scan relies on that.
-        finishWith(Collections.singletonList(SessionRequest.open(o.alias, mCommands.install(o))));
+        // The install runs in a reserved session name; InstallStore.scan relies on that.
+        finishWith(Collections.singletonList(SessionRequest.open(SessionNames.install(o.alias), mCommands.install(o))));
     }
 
     private void finishWith(List<SessionRequest> requests) {
@@ -140,7 +140,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     private void login(InstallInfo info) {
         List<SessionRequest> requests = new ArrayList<>();
         Set<String> taken = new HashSet<>(mOpenSessions);
-        String sshName = CommandBuilder.sshSessionName(info.alias);
+        String sshName = SessionNames.ssh(info.alias);
         if (info.ssh && info.sshAutoStart && !mOpenSessions.contains(sshName)) {
             requests.add(SessionRequest.open(sshName, mCommands.sshStart(info.alias)));
             taken.add(sshName);
@@ -161,7 +161,7 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     }
 
     private void showMenu(InstallInfo info, View anchor) {
-        String sshName = CommandBuilder.sshSessionName(info.alias);
+        String sshName = SessionNames.ssh(info.alias);
         boolean sshOpen = mOpenSessions.contains(sshName);
 
         PopupMenu popup = new PopupMenu(this, anchor);
@@ -217,9 +217,11 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     }
 
     private void confirmDelete(InstallInfo info) {
-        if (mOpenSessions.contains(CommandBuilder.sshSessionName(info.alias))) {
-            Toast.makeText(this, R.string.linux_stop_ssh_first, Toast.LENGTH_LONG).show();
-            return;
+        for (String name : mOpenSessions) {
+            if (SessionNames.belongsTo(name, info.alias)) {
+                Toast.makeText(this, R.string.linux_close_sessions_first, Toast.LENGTH_LONG).show();
+                return;
+            }
         }
         new AlertDialog.Builder(this)
             .setMessage(getString(R.string.linux_delete_confirm, info.alias))

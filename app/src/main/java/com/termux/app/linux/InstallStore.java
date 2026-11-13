@@ -103,11 +103,13 @@ public final class InstallStore {
             boolean hasRootfs = new File(mPaths.rootfs(alias)).isDirectory();
             Properties p = readProps(alias);
             InstallInfo.Status status;
-            if (hasRootfs) {
-                status = new File(mPaths.doneFile(alias)).exists()
-                    ? InstallInfo.Status.READY : InstallInfo.Status.INCOMPLETE;
-            } else if (sessions.contains(alias)) {
+            boolean installing = sessions.contains(SessionNames.install(alias));
+            if (hasRootfs && new File(mPaths.doneFile(alias)).exists()) {
+                status = InstallInfo.Status.READY;
+            } else if (installing) {
                 status = InstallInfo.Status.INSTALLING;
+            } else if (hasRootfs) {
+                status = InstallInfo.Status.INCOMPLETE;
             } else {
                 // Never delete metadata when a listing failed: the rootfs may merely be unreadable.
                 if (!listingFailed) removeMetadata(alias);

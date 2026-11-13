@@ -15,4 +15,19 @@ public final class SessionNames {
             if (!taken.contains(candidate)) return candidate;
         }
     }
+
+    /** Session of a running install. Contains a space, so it can never equal a valid alias. */
+    public static String install(String alias) {
+        return alias + " (install)";
+    }
+
+    /** Session of the SSH server. Contains a space, so it can never equal a valid alias. */
+    public static String ssh(String alias) {
+        return alias + " (ssh)";
+    }
+
+    /** True for the alias's own sessions: the plain name, "alias (2)", "alias (ssh)", ... */
+    public static boolean belongsTo(String sessionName, String alias) {
+        return sessionName.equals(alias) || sessionName.startsWith(alias + " (");
+    }
 }

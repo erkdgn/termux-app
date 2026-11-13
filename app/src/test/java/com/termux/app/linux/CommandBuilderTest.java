@@ -84,11 +84,6 @@ public class CommandBuilderTest {
     }
 
     @Test
-    public void sshSessionName() {
-        assertEquals("u1-ssh", CommandBuilder.sshSessionName("u1"));
-    }
-
-    @Test
     public void setPassword() {
         assertEquals("proot-distro login u1 -- passwd root\n", b.setPassword("u1", "root"));
     }
