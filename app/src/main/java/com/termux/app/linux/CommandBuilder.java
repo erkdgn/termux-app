@@ -106,7 +106,7 @@ public final class CommandBuilder {
         String start = "exec " + loginPrefix(alias, hostname) + " -- /usr/sbin/sshd -D -e\n";
         if (banner == null || banner.isEmpty()) return start;
         if (!InputValidator.isSafeLabel(banner)) throw new IllegalArgumentException("Unsafe banner");
-        return "clear && echo \"== " + banner + " ==\" && " + start;
+        return "clear; echo \"== " + banner + " ==\"; " + start;
     }
 
     public String update(String alias, String hostname) {

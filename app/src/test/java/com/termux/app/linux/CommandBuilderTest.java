@@ -202,7 +202,7 @@ public class CommandBuilderTest {
 
     @Test
     public void sshStartWithBanner() {
-        assertEquals("clear && echo \"== ubuntu - Ubuntu 26.04 LTS - SSH sunucusu - port 2022 ==\" && "
+        assertEquals("clear; echo \"== ubuntu - Ubuntu 26.04 LTS - SSH sunucusu - port 2022 ==\"; "
                 + "exec proot-distro login ubuntu --hostname ubuntu -- /usr/sbin/sshd -D -e\n",
             b.sshStart("ubuntu", "ubuntu", "ubuntu - Ubuntu 26.04 LTS - SSH sunucusu - port 2022"));
         assertEquals(b.sshStart("u1", ""), b.sshStart("u1", "", ""));

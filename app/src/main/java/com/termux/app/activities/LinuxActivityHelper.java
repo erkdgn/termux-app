@@ -71,7 +71,8 @@ final class LinuxActivityHelper {
      * "== ubuntu - Ubuntu 26.04 LTS - SSH server - port 2022 =="; no banner if it would be unsafe.
      */
     static String sshStart(Context context, CommandBuilder commands, InstallInfo info) {
-        String banner = context.getString(R.string.linux_ssh_banner, info.alias, systemLabel(context, info), info.sshPort);
+        String banner = String.format(Locale.ROOT, context.getString(R.string.linux_ssh_banner),
+            info.alias, systemLabel(context, info), info.sshPort);
         return commands.sshStart(info.alias, info.hostname, InputValidator.isSafeLabel(banner) ? banner : "");
     }
 

@@ -71,7 +71,7 @@ public final class InputValidator {
         return out;
     }
 
-    /** Whitelist for password-label text: letters, digits, space, '=', ':', '.', '-', '_'. */
+    /** Whitelist for label text echoed inside double quotes (password labels, SSH banner): letters, digits, space, '=', ':', '.', '-', '_', '(', ')'. */
     public static boolean isSafeLabel(String label) {
         if (label == null || label.isEmpty()) return false;
         for (int i = 0; i < label.length(); i++) {

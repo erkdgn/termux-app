@@ -34,7 +34,7 @@ public final class HostAddresses {
     public static Kind kindOf(String iface) {
         if (iface == null) return Kind.OTHER;
         if (iface.equals("wlan0")) return Kind.WIFI;
-        if (iface.startsWith("swlan") || iface.startsWith("softap") || iface.startsWith("ap")
+        if (iface.startsWith("swlan") || iface.startsWith("softap") || iface.matches("ap\\d+")
             || iface.matches("wlan[1-9]\\d*")) return Kind.HOTSPOT;
         if (iface.startsWith("eth")) return Kind.ETHERNET;
         if (iface.startsWith("rndis") || iface.startsWith("usb") || iface.startsWith("ncm")) return Kind.USB;
