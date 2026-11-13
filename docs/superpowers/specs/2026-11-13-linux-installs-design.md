@@ -1,7 +1,7 @@
 # Linux Installs page — design
 
 Date: 2026-11-13
-Status: draft, reviewed by builder check, awaiting owner approval
+Status: approved by owner 2026-11-13
 
 ## Intent
 
@@ -35,8 +35,12 @@ code.
     "Basic tools".
   - "Basic tools" checkbox: `sudo nano wget curl git net-tools`.
   - "SSH server" checkbox + port (default 2022) + "start SSH automatically
-    on login" checkbox. SSH **requires a username** (password auth for that
-    user; root login stays disabled). Key-based auth is out of scope.
+    on login" checkbox.
+  - **Root access** section: "Set root password" checkbox and/or "Root
+    public key" field. Also a "User public key" field when a username is
+    given.
+  - SSH requires at least one way in: a user (password), a root password, or
+    a public key. Otherwise the SSH checkbox is disabled with a hint.
   - Info note about the Android 12+ phantom process killer ("signal 9"),
     with a button that opens Developer options.
 - On **Install**: open a new terminal session named after the alias and
@@ -173,8 +177,31 @@ tokens only, see Security.)
   refresh, metadata files whose rootfs dir is gone and whose install
   session is not running are also removed.
 
+### SSH authentication
+
+- User password: `passwd <user>` (always offered when a user exists).
+- Root password: `passwd root`, and `PermitRootLogin yes` in
+  `/etc/ssh/sshd_config.d/termux.conf`.
+- Root key only (no root password): `PermitRootLogin prohibit-password`.
+- Public keys: the key text **never reaches the shell**. The app validates it
+  and writes it to a staging file
+  `~/.termux/linux-installs/<alias>.<root|user>.pub`; the typed chain only
+  references that fixed path, copying it into `/root/.ssh/authorized_keys` or
+  `/home/<user>/.ssh/authorized_keys` (dirs 700, file 600, owned by the
+  account) via `proot-distro login <alias> -- ...` with the Termux home
+  path, which proot-distro binds by default — the builder must verify that
+  bind; if absent, copy from `$PREFIX/var/lib/proot-distro/installed-rootfs/<alias>/`
+  side instead.
+- Key validation: one line matching
+  `^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh.com) [A-Za-z0-9+/]+={0,3}( [A-Za-z0-9@._-]{1,64})?$`.
+- Interactive steps stay last: `passwd <user>` then `passwd root`. The chain
+  is a single line already read by bash, so `passwd` reads fresh keyboard
+  input only.
+- Per-install actions: **Set password** offers user or root.
+
 ### Security
 
+- Public keys: validated as above, passed via a staging file, never inline.
 - Alias: `^[a-z][a-z0-9-]{0,31}$`. Username: `^[a-z_][a-z0-9_-]{0,31}$`,
   not `root`. Port: integer 1024–65535. Distro from a fixed enum.
 - Invalid input → field error, Install disabled. No free text ever reaches
