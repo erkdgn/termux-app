@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Linux installs -->
+    <string name="linux_form_title">Yeni kurulum</string>
+    <string name="linux_distro">Dağıtım</string>
+    <string name="linux_alias">Kurulum adı</string>
+    <string name="linux_user">Kullanıcı adı (isteğe bağlı)</string>
+    <string name="linux_sudo">sudo yetkisi ver</string>
+    <string name="linux_basic_tools">Temel araçlar (sudo nano wget curl git net-tools)</string>
+    <string name="linux_ssh">SSH sunucusu</string>
+    <string name="linux_ssh_port">Port</string>
+    <string name="linux_ssh_autostart">Girişte otomatik başlat</string>
+    <string name="linux_root_access">Root erişimi</string>
+    <string name="linux_root_password">Root şifresi belirle</string>
+    <string name="linux_root_key">Root açık anahtarı</string>
+    <string name="linux_user_key">Kullanıcı açık anahtarı</string>
+    <string name="linux_install">Kur</string>
+    <string name="linux_phantom_note">Android 12 ve üzerinde arka plandaki uzun işlemler sistem tarafından kapatılabilir (\"signal 9\"). Geliştirici seçeneklerinden \"Alt işlem kısıtlamalarını devre dışı bırak\" ayarını açın.</string>
+    <string name="linux_developer_options">Geliştirici seçenekleri</string>
+    <string name="linux_developer_options_unavailable">Geliştirici seçenekleri açılamadı</string>
+    <string name="linux_error_alias">1-32 karakter kullanın: küçük harf, rakam ve tire; harfle başlamalı</string>
+    <string name="linux_error_alias_taken">Bu ad zaten kullanılıyor</string>
+    <string name="linux_error_user">Küçük harf, rakam, - ve _ kullanın (en fazla 32), \"root\" olamaz</string>
+    <string name="linux_error_port">Port 1024 ile 65535 arasında olmalı</string>
+    <string name="linux_error_root_key">Geçerli, tek satırlık bir OpenSSH açık anahtarı değil</string>
+    <string name="linux_error_user_key">Geçerli, tek satırlık bir OpenSSH açık anahtarı değil</string>
+    <string name="linux_error_ssh_no_access">SSH için bir giriş yolu gerekli: kullanıcı adı, root şifresi veya açık anahtar ekleyin</string>
+    <string name="linux_error_user_key_without_user">Kullanıcı anahtarı için kullanıcı adı gerekli</string>
+    <string name="linux_error_sudo_without_user">sudo için kullanıcı adı gerekli</string>
+</resources>

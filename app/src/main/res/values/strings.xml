@@ -235,4 +235,32 @@
     <!-- Donate Preference -->
     <string name="donate_preference_title">Donate</string>
 
+
+    <!-- Linux installs -->
+    <string name="linux_form_title">New install</string>
+    <string name="linux_distro">Distribution</string>
+    <string name="linux_alias">Install name</string>
+    <string name="linux_user">Username (optional)</string>
+    <string name="linux_sudo">Grant sudo access</string>
+    <string name="linux_basic_tools">Basic tools (sudo nano wget curl git net-tools)</string>
+    <string name="linux_ssh">SSH server</string>
+    <string name="linux_ssh_port">Port</string>
+    <string name="linux_ssh_autostart">Start automatically on login</string>
+    <string name="linux_root_access">Root access</string>
+    <string name="linux_root_password">Set root password</string>
+    <string name="linux_root_key">Root public key</string>
+    <string name="linux_user_key">User public key</string>
+    <string name="linux_install">Install</string>
+    <string name="linux_phantom_note">On Android 12 and later, long background processes may be killed by the system (\"signal 9\"). Turn on \"Disable child process restrictions\" in Developer options.</string>
+    <string name="linux_developer_options">Developer options</string>
+    <string name="linux_developer_options_unavailable">Developer options could not be opened</string>
+    <string name="linux_error_alias">Use 1-32 characters: lowercase letters, digits and hyphens, starting with a letter</string>
+    <string name="linux_error_alias_taken">This name is already in use</string>
+    <string name="linux_error_user">Use lowercase letters, digits, - and _ (max 32), not \"root\"</string>
+    <string name="linux_error_port">Port must be between 1024 and 65535</string>
+    <string name="linux_error_root_key">Not a valid single-line OpenSSH public key</string>
+    <string name="linux_error_user_key">Not a valid single-line OpenSSH public key</string>
+    <string name="linux_error_ssh_no_access">SSH needs a way to log in: add a username, a root password or a public key</string>
+    <string name="linux_error_user_key_without_user">A user key needs a username</string>
+    <string name="linux_error_sudo_without_user">Sudo needs a username</string>
 </resources>
