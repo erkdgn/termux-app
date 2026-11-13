@@ -283,5 +283,6 @@
     <string name="linux_close_sessions_first">Close this install's sessions first</string>
     <string name="linux_save_failed">Could not save the install settings</string>
     <string name="linux_install_invalid">This install is not valid or its name is already in use</string>
+    <string name="linux_open_installs">Linux installs</string>
     <string name="linux_cancel">Cancel</string>
 </resources>

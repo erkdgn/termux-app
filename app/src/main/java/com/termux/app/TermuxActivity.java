@@ -28,6 +28,7 @@ import android.widget.Toast;
 
 import com.termux.R;
 import com.termux.app.api.file.FileReceiverActivity;
+import com.termux.app.linux.SessionRequest;
 import com.termux.app.terminal.TermuxActivityRootView;
 import com.termux.app.terminal.TermuxTerminalSessionActivityClient;
 import com.termux.app.terminal.io.TermuxTerminalExtraKeys;
@@ -40,6 +41,7 @@ import com.termux.shared.data.DataUtils;
 import com.termux.shared.termux.TermuxConstants;
 import com.termux.shared.termux.TermuxConstants.TERMUX_APP.TERMUX_ACTIVITY;
 import com.termux.app.activities.HelpActivity;
+import com.termux.app.activities.LinuxInstallsActivity;
 import com.termux.app.activities.SettingsActivity;
 import com.termux.shared.termux.crash.TermuxCrashUtils;
 import com.termux.shared.termux.settings.preferences.TermuxAppSharedPreferences;
@@ -66,6 +68,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.viewpager.widget.ViewPager;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * A terminal emulator activity.
@@ -194,6 +197,12 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
     private static final String LOG_TAG = "TermuxActivity";
 
+    /** Request code for {@link LinuxInstallsActivity}. */
+    static final int REQUEST_LINUX_INSTALLS = 1100;
+
+    /** Linux session requests received before the {@link TermuxService} was connected. */
+    private List<SessionRequest> mPendingLinuxRequests;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Logger.logDebug(LOG_TAG, "onCreate");
@@ -246,6 +255,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         setTerminalToolbarView(savedInstanceState);
 
         setSettingsButtonView();
+
+        setLinuxInstallsButtonView();
 
         setNewSessionButtonView();
 
@@ -427,6 +438,12 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
         // Update the {@link TerminalSession} and {@link TerminalEmulator} clients.
         mTermuxService.setTermuxTerminalSessionClient(mTermuxTerminalSessionActivityClient);
+
+        if (mPendingLinuxRequests != null) {
+            List<SessionRequest> pending = mPendingLinuxRequests;
+            mPendingLinuxRequests = null;
+            mTermuxTerminalSessionActivityClient.applySessionRequests(pending);
+        }
     }
 
     @Override
@@ -567,6 +584,17 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         ImageButton settingsButton = findViewById(R.id.settings_button);
         settingsButton.setOnClickListener(v -> {
             ActivityUtils.startActivity(this, new Intent(this, SettingsActivity.class));
+        });
+    }
+
+    private void setLinuxInstallsButtonView() {
+        ImageButton linuxInstallsButton = findViewById(R.id.linux_installs_button);
+        linuxInstallsButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, LinuxInstallsActivity.class);
+            String[] openSessions = mTermuxTerminalSessionActivityClient != null
+                ? mTermuxTerminalSessionActivityClient.getOpenSessionNames() : new String[0];
+            intent.putExtra(SessionRequest.EXTRA_OPEN_SESSIONS, openSessions);
+            startActivityForResult(intent, REQUEST_LINUX_INSTALLS);
         });
     }
 
@@ -795,6 +823,22 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         Logger.logVerbose(LOG_TAG, "onActivityResult: requestCode: " + requestCode + ", resultCode: "  + resultCode + ", data: "  + IntentUtils.getIntentString(data));
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION) {
             requestStoragePermission(true);
+        }
+
+        if (requestCode == REQUEST_LINUX_INSTALLS && resultCode == RESULT_OK && data != null) {
+            String[] flat = data.getStringArrayExtra(SessionRequest.EXTRA_REQUESTS);
+            if (flat != null && flat.length > 0) {
+                try {
+                    List<SessionRequest> requests = SessionRequest.decode(flat);
+                    if (getTermuxService() != null && mTermuxTerminalSessionActivityClient != null)
+                        mTermuxTerminalSessionActivityClient.applySessionRequests(requests);
+                    else
+                        mPendingLinuxRequests = requests;
+                } catch (IllegalArgumentException e) {
+                    Logger.logStackTraceWithMessage(LOG_TAG, "Ignoring malformed Linux session requests", e);
+                }
+            }
+            getDrawer().closeDrawers();
         }
     }
 
