@@ -78,12 +78,15 @@ public final class InstallStore {
         Set<String> sessions = openSessionNames == null ? Collections.<String>emptySet() : openSessionNames;
         TreeSet<String> aliases = new TreeSet<>();
         boolean listingFailed = false;
-        File rootfsDir = new File(mPaths.rootfsDir());
-        File[] dirs = rootfsDir.listFiles();
-        if (dirs == null && rootfsDir.exists()) listingFailed = true;
-        if (dirs != null) {
-            for (File f : dirs) {
-                if (f.isDirectory() && InputValidator.isValidAlias(f.getName())) aliases.add(f.getName());
+        // Current proot-distro keeps containers/<alias>/rootfs; older versions installed-rootfs/<alias>.
+        for (String dirPath : new String[] {mPaths.containersDir(), mPaths.legacyRootfsDir()}) {
+            File dir = new File(dirPath);
+            File[] dirs = dir.listFiles();
+            if (dirs == null && dir.exists()) listingFailed = true;
+            if (dirs != null) {
+                for (File f : dirs) {
+                    if (f.isDirectory() && InputValidator.isValidAlias(f.getName())) aliases.add(f.getName());
+                }
             }
         }
         File metaDir = new File(mPaths.metaDir());
@@ -101,7 +104,7 @@ public final class InstallStore {
 
         List<InstallInfo> result = new ArrayList<>();
         for (String alias : aliases) {
-            boolean hasRootfs = new File(mPaths.rootfs(alias)).isDirectory();
+            boolean hasRootfs = hasRootfs(alias);
             Properties p = readProps(alias);
             InstallInfo.Status status;
             boolean installing = sessions.contains(SessionNames.install(alias));
@@ -142,7 +145,12 @@ public final class InstallStore {
     }
 
     public boolean isAliasTaken(String alias) {
-        return new File(mPaths.rootfs(alias)).exists() || new File(mPaths.metaFile(alias)).exists();
+        return new File(mPaths.containersDir(), alias).exists() || new File(mPaths.legacyRootfs(alias)).exists()
+            || new File(mPaths.metaFile(alias)).exists();
+    }
+
+    private boolean hasRootfs(String alias) {
+        return new File(mPaths.rootfs(alias)).isDirectory() || new File(mPaths.legacyRootfs(alias)).isDirectory();
     }
 
     /** Returns null if the metadata is missing or unreadable. */

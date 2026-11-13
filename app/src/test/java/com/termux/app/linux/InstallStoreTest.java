@@ -25,7 +25,7 @@ public class InstallStoreTest {
     @Before
     public void setUp() throws IOException {
         File base = tmp.newFolder("base");
-        paths = new LinuxPaths(new File(base, "rootfs").getPath(), new File(base, "meta").getPath(),
+        paths = new LinuxPaths(new File(base, "pd").getPath(), new File(base, "meta").getPath(),
             new File(base, "home").getPath());
         store = new InstallStore(paths);
     }
@@ -165,7 +165,7 @@ public class InstallStoreTest {
         store.save(opts("u1", "k", ""));
         mkRootfs("u1");
         mkDone("u1");
-        File rootfs = new File(paths.rootfsDir());
+        File rootfs = new File(paths.containersDir());
         assertTrue(rootfs.setReadable(false));
         try {
             assertNull(rootfs.listFiles());
@@ -176,6 +176,43 @@ public class InstallStoreTest {
         assertTrue(new File(paths.metaFile("u1")).exists());
         assertTrue(new File(paths.doneFile("u1")).exists());
         assertTrue(new File(paths.rootKeyFile("u1")).exists());
+    }
+
+    @Test
+    public void containersLayoutIsReady() throws IOException {
+        store.save(opts("u1", "", ""));
+        assertTrue(new File(paths.containersDir(), "u1/rootfs").mkdirs());
+        mkDone("u1");
+        List<InstallInfo> list = store.scan(Collections.singleton(SessionNames.install("u1")));
+        assertEquals(1, list.size());
+        assertEquals(InstallInfo.Status.READY, list.get(0).status);
+    }
+
+    @Test
+    public void legacyLayoutIsReady() throws IOException {
+        store.save(opts("u1", "", ""));
+        assertTrue(new File(paths.legacyRootfs("u1")).mkdirs());
+        mkDone("u1");
+        List<InstallInfo> list = store.scan(Collections.<String>emptySet());
+        assertEquals(1, list.size());
+        assertEquals(InstallInfo.Status.READY, list.get(0).status);
+    }
+
+    @Test
+    public void manualContainerWithoutMetadataListed() {
+        assertTrue(new File(paths.containersDir(), "deb/rootfs").mkdirs());
+        List<InstallInfo> list = store.scan(Collections.<String>emptySet());
+        assertEquals(1, list.size());
+        assertEquals("deb", list.get(0).alias);
+    }
+
+    @Test
+    public void aliasTakenInEitherLayout() {
+        assertTrue(new File(paths.legacyRootfs("old")).mkdirs());
+        assertTrue(new File(paths.containersDir(), "new1").mkdirs());
+        assertTrue(store.isAliasTaken("old"));
+        assertTrue(store.isAliasTaken("new1"));
+        assertFalse(store.isAliasTaken("none"));
     }
 
     @Test

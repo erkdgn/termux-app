@@ -23,7 +23,8 @@ code.
 
 - Drawer button opens a **Linux Installs** activity.
 - List installed distros found under
-  `$PREFIX/var/lib/proot-distro/installed-rootfs/<alias>/`.
+  `$PREFIX/var/lib/proot-distro/containers/<alias>/rootfs/` (current proot-distro)
+  and `$PREFIX/var/lib/proot-distro/installed-rootfs/<alias>/` (older versions).
 - Per install: **Login (root)**, **Login (user)**, overflow menu with
   **Start/Stop SSH**, **Backup**, **Delete** (confirm dialog).
 - **New install** form:
@@ -131,7 +132,7 @@ tokens only, see Security.)
 
 ### Listing installs and metadata
 
-- Installs = directories in `installed-rootfs/`. Distro type and options are
+- Installs = directories in `containers/` and the legacy `installed-rootfs/`. Distro type and options are
   not recoverable from the rootfs alone, so on Install the app writes a small
   metadata file `~/.termux/linux-installs/<alias>.properties`
   (`distro`, `user`, `ssh`, `sshPort`, `sshAutoStart`). Installs without
@@ -151,8 +152,8 @@ tokens only, see Security.)
 
 - Trust whatever `pkg install proot-distro` installs (no pinning). The app
   relies only on: `install --override-alias`, `login [--user]`, `backup
-  --output`, `remove`, and the `installed-rootfs/<alias>` layout. If
-  `installed-rootfs/` is missing, the list shows an empty state instead of
+  --output`, `remove`, and the `containers/<alias>/rootfs` (or legacy
+  `installed-rootfs/<alias>`) layout. If neither dir exists, the list shows an empty state instead of
   failing.
 
 ### Per-install actions
@@ -186,11 +187,11 @@ tokens only, see Security.)
 - Public keys: the key text **never reaches the shell**. The app validates it
   and writes it to a staging file
   `~/.termux/linux-installs/<alias>.<root|user>.pub`; the typed chain only
-  references that fixed path, copying it from the Termux side with
-  `install -D -m 600 <staging> <rootfs>/<home>/.ssh/authorized_keys`
-  (rootfs = `$PREFIX/var/lib/proot-distro/installed-rootfs/<alias>`), after
-  the user was created. No chown needed: under proot-distro files appear
-  root-owned, which sshd StrictModes accepts.
+  references that fixed path and pipes it into the container
+  (`proot-distro login <alias> -- sh -c "mkdir -p <dir> && chmod 700 <dir> &&
+  cat > <dir>/authorized_keys && chmod 600 …" < <staging>`, plus `chown` for
+  the user's key), so it works with any rootfs layout. Runs after the user was
+  created.
 - Key validation: one line matching
   `^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh.com) [A-Za-z0-9+/]+={0,3}( [A-Za-z0-9@._-]{1,64})?$`.
 - Interactive steps stay last: `passwd <user>` then `passwd root`. The chain

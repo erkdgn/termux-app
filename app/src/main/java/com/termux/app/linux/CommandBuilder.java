@@ -32,12 +32,12 @@ public final class CommandBuilder {
         sb.append(AND).append("proot-distro install --override-alias ").append(a).append(' ').append(o.distro.id());
         sb.append(AND).append("proot-distro login ").append(a)
             .append(" -- env DEBIAN_FRONTEND=noninteractive bash -c '").append(inner(o)).append('\'');
-        String rootfs = mPaths.rootfs(a);
+        // Keys are piped into the container, so this works whatever rootfs layout proot-distro uses.
         if (!o.rootKey.isEmpty()) {
-            appendKeyInstall(sb, mPaths.rootKeyFile(a), rootfs + "/root/.ssh");
+            appendKeyInstall(sb, a, mPaths.rootKeyFile(a), "/root/.ssh", null);
         }
         if (o.hasUser() && !o.userKey.isEmpty()) {
-            appendKeyInstall(sb, mPaths.userKeyFile(a), rootfs + "/home/" + o.user + "/.ssh");
+            appendKeyInstall(sb, a, mPaths.userKeyFile(a), "/home/" + o.user + "/.ssh", o.user);
         }
         // The marker files tell the app how the install ended; the session itself stays open either way.
         sb.append("; then touch ").append(mPaths.doneFile(a));
@@ -81,9 +81,15 @@ public final class CommandBuilder {
         return "proot-distro login " + alias + " -- passwd " + account;
     }
 
-    private static void appendKeyInstall(StringBuilder sb, String keyFile, String sshDir) {
-        sb.append(AND).append("install -D -m 600 ").append(keyFile).append(' ').append(sshDir)
-            .append("/authorized_keys").append(AND).append("chmod 700 ").append(sshDir);
+    private static void appendKeyInstall(StringBuilder sb, String alias, String keyFile, String sshDir, String owner) {
+        sb.append(AND).append("proot-distro login ").append(alias).append(" -- sh -c \"mkdir -p ").append(sshDir)
+            .append(AND).append("chmod 700 ").append(sshDir)
+            .append(AND).append("cat > ").append(sshDir).append("/authorized_keys")
+            .append(AND).append("chmod 600 ").append(sshDir).append("/authorized_keys");
+        if (owner != null) {
+            sb.append(AND).append("chown -R ").append(owner).append(':').append(owner).append(' ').append(sshDir);
+        }
+        sb.append("\" < ").append(keyFile);
     }
 
     /** Commands run inside the distro; contains no single quote characters. */

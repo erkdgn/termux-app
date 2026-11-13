@@ -5,25 +5,32 @@ import com.termux.shared.termux.TermuxConstants;
 /** File system locations used by Linux installs. All values are fixed paths, never user text. */
 public final class LinuxPaths {
 
-    private final String mRootfsDir;
+    /** proot-distro's runtime dir, e.g. $PREFIX/var/lib/proot-distro. */
+    private final String mProotDistroDir;
     private final String mMetaDir;
     private final String mHomeDir;
 
-    public LinuxPaths(String rootfsDir, String metaDir, String homeDir) {
-        mRootfsDir = rootfsDir;
+    public LinuxPaths(String prootDistroDir, String metaDir, String homeDir) {
+        mProotDistroDir = prootDistroDir;
         mMetaDir = metaDir;
         mHomeDir = homeDir;
     }
 
     public static LinuxPaths defaults() {
         return new LinuxPaths(
-            TermuxConstants.TERMUX_PREFIX_DIR_PATH + "/var/lib/proot-distro/installed-rootfs",
+            TermuxConstants.TERMUX_PREFIX_DIR_PATH + "/var/lib/proot-distro",
             TermuxConstants.TERMUX_DATA_HOME_DIR_PATH + "/linux-installs",
             TermuxConstants.TERMUX_HOME_DIR_PATH);
     }
 
+    /** Container root filesystem in the current proot-distro layout: containers/&lt;alias&gt;/rootfs. */
     public String rootfs(String alias) {
-        return mRootfsDir + "/" + alias;
+        return containersDir() + "/" + alias + "/rootfs";
+    }
+
+    /** Root filesystem in the layout of older proot-distro versions: installed-rootfs/&lt;alias&gt;. */
+    public String legacyRootfs(String alias) {
+        return legacyRootfsDir() + "/" + alias;
     }
 
     public String metaFile(String alias) {
@@ -46,8 +53,12 @@ public final class LinuxPaths {
         return mMetaDir + "/" + alias + ".user.pub";
     }
 
-    public String rootfsDir() {
-        return mRootfsDir;
+    public String containersDir() {
+        return mProotDistroDir + "/containers";
+    }
+
+    public String legacyRootfsDir() {
+        return mProotDistroDir + "/installed-rootfs";
     }
 
     public String metaDir() {

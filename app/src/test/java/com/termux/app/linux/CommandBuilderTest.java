@@ -29,8 +29,9 @@ public class CommandBuilderTest {
         assertTrue(c, c.contains("PermitRootLogin yes"));
         assertTrue(c, c.contains("Port 2022"));
         assertTrue(c, c.contains("useradd -m -s /bin/bash -G sudo erkan"));
-        assertTrue(c, c.contains("install -D -m 600 /M/d1.root.pub /R/d1/root/.ssh/authorized_keys"));
-        assertTrue(c, c.contains("install -D -m 600 /M/d1.user.pub /R/d1/home/erkan/.ssh/authorized_keys"));
+        assertTrue(c, c.contains(" && proot-distro login d1 -- sh -c \"mkdir -p /root/.ssh && chmod 700 /root/.ssh && cat > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys\" < /M/d1.root.pub"));
+        assertTrue(c, c.contains(" && proot-distro login d1 -- sh -c \"mkdir -p /home/erkan/.ssh && chmod 700 /home/erkan/.ssh && cat > /home/erkan/.ssh/authorized_keys && chmod 600 /home/erkan/.ssh/authorized_keys && chown -R erkan:erkan /home/erkan/.ssh\" < /M/d1.user.pub"));
+        assertFalse(c, c.contains("install -D"));
         assertTrue(c, c.startsWith("if pkg update -y && "));
         assertTrue(c, c.endsWith("; then touch /M/d1.done && proot-distro login d1 -- passwd erkan"
             + " && proot-distro login d1 -- passwd root; else touch /M/d1.failed; fi\n"));
