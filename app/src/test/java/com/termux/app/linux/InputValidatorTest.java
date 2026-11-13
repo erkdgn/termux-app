@@ -169,4 +169,15 @@ public class InputValidatorTest {
         assertTrue(e.contains(InputValidator.Error.TIMEZONE));
         assertTrue(e.contains(InputValidator.Error.PACKAGES));
     }
+
+    @Test
+    public void validateEditInfo() {
+        assertTrue(InputValidator.validate(new EditInfo(Distro.UBUNTU, DistroVersion.UBUNTU_24_04, "bob", "box1",
+            true, 2022, false, RootSshLogin.NO)).isEmpty());
+        EnumSet<InputValidator.Error> e = InputValidator.validate(new EditInfo(Distro.DEBIAN,
+            DistroVersion.UBUNTU_24_04, "Bad;", "a;b", true, 80, false, null));
+        assertEquals(EnumSet.of(InputValidator.Error.USER, InputValidator.Error.HOSTNAME,
+            InputValidator.Error.PORT, InputValidator.Error.VERSION), e);
+        assertTrue(InputValidator.validate(new EditInfo(null, null, "", "", false, 0, false, null)).isEmpty());
+    }
 }

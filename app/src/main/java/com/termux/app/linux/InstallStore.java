@@ -12,6 +12,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -36,13 +37,40 @@ public final class InstallStore {
         }
         Properties p = new Properties();
         p.setProperty("distro", o.distro.id());
+        p.setProperty("version", o.version.id());
+        p.setProperty("timezone", o.timezone);
+        p.setProperty("localeTr", String.valueOf(o.localeTr));
+        p.setProperty("hostname", o.hostname);
+        p.setProperty("rootSshLogin", o.rootSshLogin().name());
+        StringBuilder groups = new StringBuilder();
+        for (PackageGroup g : o.groups) {
+            if (groups.length() > 0) groups.append(',');
+            groups.append(g.name());
+        }
+        p.setProperty("groups", groups.toString());
+        StringBuilder extras = new StringBuilder();
+        for (String x : o.extraPackages) {
+            if (extras.length() > 0) extras.append(' ');
+            extras.append(x);
+        }
+        p.setProperty("extraPackages", extras.toString());
         p.setProperty("user", o.user);
         p.setProperty("sudo", String.valueOf(o.sudo));
         p.setProperty("ssh", String.valueOf(o.ssh));
         p.setProperty("sshPort", String.valueOf(o.sshPort));
         p.setProperty("sshAutoStart", String.valueOf(o.sshAutoStart));
         p.setProperty("rootPassword", String.valueOf(o.rootPassword));
-        OutputStream out = new FileOutputStream(mPaths.metaFile(o.alias));
+        writeProps(o.alias, p);
+        // A stale marker from an earlier install of this alias must not make a new install look READY.
+        new File(mPaths.doneFile(o.alias)).delete();
+        new File(mPaths.failedFile(o.alias)).delete();
+        new File(mPaths.pkgFailedFile(o.alias)).delete();
+        writeKey(mPaths.rootKeyFile(o.alias), o.rootKey);
+        writeKey(mPaths.userKeyFile(o.alias), o.userKey);
+    }
+
+    private void writeProps(String alias, Properties p) throws IOException {
+        OutputStream out = new FileOutputStream(mPaths.metaFile(alias));
         try {
             Writer w = new OutputStreamWriter(out, "UTF-8");
             p.store(w, null);
@@ -50,11 +78,52 @@ public final class InstallStore {
         } finally {
             out.close();
         }
-        // A stale marker from an earlier install of this alias must not make a new install look READY.
-        new File(mPaths.doneFile(o.alias)).delete();
-        new File(mPaths.failedFile(o.alias)).delete();
-        writeKey(mPaths.rootKeyFile(o.alias), o.rootKey);
-        writeKey(mPaths.userKeyFile(o.alias), o.userKey);
+    }
+
+    /**
+     * Merges the edited values into the install's metadata (creating it if missing; keys not owned by
+     * the edit are kept) and marks the install done when its rootfs exists.
+     */
+    public void saveEdit(String alias, EditInfo e) throws IOException {
+        if (!InputValidator.isValidAlias(alias)) throw new IllegalArgumentException("alias");
+        File dir = new File(mPaths.metaDir());
+        if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
+            throw new IOException("Cannot create " + dir);
+        }
+        Properties p = readProps(alias);
+        if (p == null) p = new Properties();
+        if (e.distro == null) {
+            p.remove("distro");
+            p.remove("version");
+        } else {
+            p.setProperty("distro", e.distro.id());
+            if (e.version == null) p.remove("version");
+            else p.setProperty("version", e.version.id());
+        }
+        p.setProperty("user", e.user);
+        p.setProperty("hostname", e.hostname);
+        p.setProperty("ssh", String.valueOf(e.ssh));
+        p.setProperty("sshPort", String.valueOf(e.sshPort));
+        p.setProperty("sshAutoStart", String.valueOf(e.sshAutoStart));
+        p.setProperty("rootSshLogin", e.rootSshLogin.name());
+        writeProps(alias, p);
+        if (hasRootfs(alias)) {
+            File done = new File(mPaths.doneFile(alias));
+            if (!done.exists() && !done.createNewFile() && !done.exists()) {
+                throw new IOException("Cannot create " + done);
+            }
+        }
+    }
+
+    /** Deletes all metadata of an install. Only for explicit user actions. */
+    public void forget(String alias) {
+        if (!InputValidator.isValidAlias(alias)) throw new IllegalArgumentException("alias");
+        new File(mPaths.metaFile(alias)).delete();
+        new File(mPaths.doneFile(alias)).delete();
+        new File(mPaths.failedFile(alias)).delete();
+        new File(mPaths.pkgFailedFile(alias)).delete();
+        new File(mPaths.rootKeyFile(alias)).delete();
+        new File(mPaths.userKeyFile(alias)).delete();
     }
 
     private static void writeKey(String path, String key) throws IOException {
@@ -73,16 +142,14 @@ public final class InstallStore {
         }
     }
 
-    /** Lists installs sorted by alias; removes orphaned metadata. */
+    /** Lists installs sorted by alias. Never deletes anything. */
     public List<InstallInfo> scan(Set<String> openSessionNames) {
         Set<String> sessions = openSessionNames == null ? Collections.<String>emptySet() : openSessionNames;
         TreeSet<String> aliases = new TreeSet<>();
-        boolean listingFailed = false;
         // Current proot-distro keeps containers/<alias>/rootfs; older versions installed-rootfs/<alias>.
         for (String dirPath : new String[] {mPaths.containersDir(), mPaths.legacyRootfsDir()}) {
             File dir = new File(dirPath);
             File[] dirs = dir.listFiles();
-            if (dirs == null && dir.exists()) listingFailed = true;
             if (dirs != null) {
                 for (File f : dirs) {
                     if (f.isDirectory() && InputValidator.isValidAlias(f.getName())) aliases.add(f.getName());
@@ -91,7 +158,6 @@ public final class InstallStore {
         }
         File metaDir = new File(mPaths.metaDir());
         File[] metas = metaDir.listFiles();
-        if (metas == null && metaDir.exists()) listingFailed = true;
         if (metas != null) {
             for (File f : metas) {
                 String n = f.getName();
@@ -106,42 +172,70 @@ public final class InstallStore {
         for (String alias : aliases) {
             boolean hasRootfs = hasRootfs(alias);
             Properties p = readProps(alias);
-            InstallInfo.Status status;
             boolean installing = sessions.contains(SessionNames.install(alias));
             boolean failed = new File(mPaths.failedFile(alias)).exists();
+            InstallInfo.Status status;
             if (hasRootfs && new File(mPaths.doneFile(alias)).exists()) {
                 status = InstallInfo.Status.READY;
-            } else if (failed && (installing || hasRootfs)) {
-                // The install chain failed; its session stays open at the prompt, so check this first.
-                status = InstallInfo.Status.INCOMPLETE;
-            } else if (installing) {
+            } else if (installing && !failed) {
                 status = InstallInfo.Status.INSTALLING;
-            } else if (hasRootfs) {
+            } else if (hasRootfs || (failed && installing)) {
+                // A failed install chain leaves its session open at the prompt.
                 status = InstallInfo.Status.INCOMPLETE;
             } else {
-                // Never delete metadata when a listing failed: the rootfs may merely be unreadable.
-                if (!listingFailed) removeMetadata(alias);
-                continue;
+                status = InstallInfo.Status.NOT_FOUND;
             }
-            Distro distro = null;
-            String user = "";
-            boolean ssh = false;
-            int port = 0;
-            boolean autoStart = false;
-            if (p != null) {
-                distro = Distro.fromId(p.getProperty("distro"));
-                user = p.getProperty("user", "");
-                ssh = Boolean.parseBoolean(p.getProperty("ssh"));
-                autoStart = Boolean.parseBoolean(p.getProperty("sshAutoStart"));
-                try {
-                    port = Integer.parseInt(p.getProperty("sshPort", "0").trim());
-                } catch (NumberFormatException e) {
-                    port = 0;
-                }
-            }
-            result.add(new InstallInfo(alias, status, distro, user, ssh, port, autoStart));
+            InstallInfo.Builder b = new InstallInfo.Builder().alias(alias).status(status).failed(failed)
+                .packagesFailed(new File(mPaths.pkgFailedFile(alias)).exists())
+                .hasMetadata(new File(mPaths.metaFile(alias)).isFile());
+            if (p != null) fill(b, p);
+            result.add(b.build());
         }
         return result;
+    }
+
+    /** Copies metadata into the builder, re-validating every value. */
+    private static void fill(InstallInfo.Builder b, Properties p) {
+        Distro distro = Distro.fromId(p.getProperty("distro"));
+        b.distro(distro);
+        if (distro != null) b.version(DistroVersion.fromId(distro, p.getProperty("version")));
+        String user = p.getProperty("user", "");
+        b.user(InputValidator.isValidUser(user) ? user : "");
+        String hostname = p.getProperty("hostname", "");
+        b.hostname(InputValidator.isValidHostname(hostname) ? hostname : "");
+        String tz = p.getProperty("timezone", "");
+        b.timezone(Timezones.isKnown(tz) ? tz : "");
+        b.localeTr(Boolean.parseBoolean(p.getProperty("localeTr")));
+        b.ssh(Boolean.parseBoolean(p.getProperty("ssh")));
+        b.sshAutoStart(Boolean.parseBoolean(p.getProperty("sshAutoStart")));
+        int port;
+        try {
+            port = Integer.parseInt(p.getProperty("sshPort", "0").trim());
+        } catch (NumberFormatException e) {
+            port = 0;
+        }
+        b.sshPort(port);
+        RootSshLogin login = RootSshLogin.fromName(p.getProperty("rootSshLogin"));
+        b.rootSshLogin(login == null ? RootSshLogin.KEY_ONLY : login);
+        Set<PackageGroup> groups = EnumSet.noneOf(PackageGroup.class);
+        String g = p.getProperty("groups", "").trim();
+        if (!g.isEmpty()) {
+            for (String name : g.split(",")) {
+                PackageGroup pg = PackageGroup.fromName(name.trim());
+                if (pg != null) groups.add(pg);
+            }
+        }
+        b.groups(groups);
+        List<String> extras = new ArrayList<>();
+        String x = p.getProperty("extraPackages", "").trim();
+        if (!x.isEmpty()) {
+            for (String t : x.split("\\s+")) {
+                if (InputValidator.isValidPackage(t) && extras.size() < InputValidator.MAX_EXTRA_PACKAGES) {
+                    extras.add(t);
+                }
+            }
+        }
+        b.extraPackages(extras);
     }
 
     public boolean isAliasTaken(String alias) {
@@ -170,13 +264,5 @@ public final class InstallStore {
         } catch (IOException | IllegalArgumentException e) {
             return null;
         }
-    }
-
-    private void removeMetadata(String alias) {
-        new File(mPaths.metaFile(alias)).delete();
-        new File(mPaths.doneFile(alias)).delete();
-        new File(mPaths.failedFile(alias)).delete();
-        new File(mPaths.rootKeyFile(alias)).delete();
-        new File(mPaths.userKeyFile(alias)).delete();
     }
 }

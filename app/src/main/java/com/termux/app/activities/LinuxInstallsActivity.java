@@ -292,7 +292,10 @@ public class LinuxInstallsActivity extends AppCompatActivity {
 
             TextView status = row.findViewById(R.id.linux_item_status);
             if (info.status == InstallInfo.Status.INCOMPLETE) {
-                status.setText(R.string.linux_status_incomplete);
+                status.setText(info.failed ? R.string.linux_status_install_failed : R.string.linux_status_incomplete);
+                status.setVisibility(View.VISIBLE);
+            } else if (info.status == InstallInfo.Status.NOT_FOUND) {
+                status.setText(info.failed ? R.string.linux_status_install_failed : R.string.linux_status_not_found);
                 status.setVisibility(View.VISIBLE);
             } else if (info.status == InstallInfo.Status.INSTALLING) {
                 status.setText(R.string.linux_status_installing);
@@ -301,7 +304,9 @@ public class LinuxInstallsActivity extends AppCompatActivity {
                 status.setVisibility(View.GONE);
             }
 
-            boolean installing = info.status == InstallInfo.Status.INSTALLING;
+            // NOT_FOUND is treated like INSTALLING until the detail page handles it: no actions.
+            boolean installing = info.status == InstallInfo.Status.INSTALLING
+                || info.status == InstallInfo.Status.NOT_FOUND;
 
             Button login = row.findViewById(R.id.linux_item_login);
             login.setEnabled(!installing);

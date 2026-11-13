@@ -276,6 +276,8 @@
     <string name="linux_delete">Delete</string>
     <string name="linux_status_incomplete">incomplete</string>
     <string name="linux_status_installing">installing…</string>
+    <string name="linux_status_not_found">not found</string>
+    <string name="linux_status_install_failed">install failed</string>
     <string name="linux_unknown_distro">Unknown</string>
     <string name="linux_ssh_port_label">SSH: %1$d</string>
     <string name="linux_password_for_title">Set password for</string>

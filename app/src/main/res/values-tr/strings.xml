@@ -40,6 +40,8 @@
     <string name="linux_delete">Sil</string>
     <string name="linux_status_incomplete">tamamlanmadı</string>
     <string name="linux_status_installing">kuruluyor…</string>
+    <string name="linux_status_not_found">bulunamadı</string>
+    <string name="linux_status_install_failed">kurulum başarısız</string>
     <string name="linux_unknown_distro">Bilinmiyor</string>
     <string name="linux_ssh_port_label">SSH: %1$d</string>
     <string name="linux_password_for_title">Şifre belirlenecek hesap</string>

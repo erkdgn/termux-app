@@ -6,7 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.junit.Assume;
@@ -95,14 +97,17 @@ public class InstallStoreTest {
     }
 
     @Test
-    public void orphanMetadataRemoved() throws IOException {
+    public void missingRootfsIsNotFoundAndKept() throws IOException {
         store.save(opts("u1", "k", "k2"));
         mkDone("u1");
-        assertTrue(store.scan(Collections.<String>emptySet()).isEmpty());
-        assertFalse(new File(paths.metaFile("u1")).exists());
-        assertFalse(new File(paths.doneFile("u1")).exists());
-        assertFalse(new File(paths.rootKeyFile("u1")).exists());
-        assertFalse(new File(paths.userKeyFile("u1")).exists());
+        List<InstallInfo> l = store.scan(Collections.<String>emptySet());
+        assertEquals(1, l.size());
+        assertEquals(InstallInfo.Status.NOT_FOUND, l.get(0).status);
+        assertTrue(l.get(0).hasMetadata);
+        assertTrue(new File(paths.metaFile("u1")).exists());
+        assertTrue(new File(paths.doneFile("u1")).exists());
+        assertTrue(new File(paths.rootKeyFile("u1")).exists());
+        assertTrue(new File(paths.userKeyFile("u1")).exists());
     }
 
     @Test
@@ -251,12 +256,140 @@ public class InstallStoreTest {
     }
 
     @Test
-    public void failedWithoutRootfsAndNoSessionIsOrphanCleaned() throws IOException {
+    public void failedWithoutSessionIsNotFoundFailed() throws IOException {
         store.save(opts("u1", "", ""));
         mkFailed("u1");
-        assertTrue(store.scan(Collections.<String>emptySet()).isEmpty());
-        assertFalse(new File(paths.metaFile("u1")).exists());
-        assertFalse(new File(paths.failedFile("u1")).exists());
+        List<InstallInfo> l = store.scan(Collections.<String>emptySet());
+        assertEquals(1, l.size());
+        assertEquals(InstallInfo.Status.NOT_FOUND, l.get(0).status);
+        assertTrue(l.get(0).failed);
+        assertTrue(new File(paths.metaFile("u1")).exists());
+    }
+
+    private void writeProps(String alias, String content) throws IOException {
+        assertTrue(new File(paths.metaDir()).isDirectory() || new File(paths.metaDir()).mkdirs());
+        Files.write(new File(paths.metaFile(alias)).toPath(), content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void v1MetadataLoads() throws IOException {
+        writeProps("u1", "distro=ubuntu\nuser=bob\nssh=true\nsshPort=2022\n");
+        mkRootfs("u1");
+        InstallInfo i = store.scan(null).get(0);
+        assertEquals(Distro.UBUNTU, i.distro);
+        assertNull(i.version);
+        assertEquals("", i.hostname);
+        assertEquals("", i.timezone);
+        assertFalse(i.localeTr);
+        assertEquals(RootSshLogin.KEY_ONLY, i.rootSshLogin);
+        assertEquals("bob", i.user);
+        assertTrue(i.hasMetadata);
+    }
+
+    @Test
+    public void v2RoundTrip() throws IOException {
+        InstallOptions o = new InstallOptions.Builder().distro(Distro.DEBIAN).version(DistroVersion.DEBIAN_12)
+            .alias("d1").user("bob").timezone("UTC").localeTr(true).hostname("box1").rootPassword(true)
+            .groups(EnumSet.of(PackageGroup.PYTHON, PackageGroup.NGINX))
+            .extraPackages(Arrays.asList("htop")).build();
+        store.save(o);
+        mkRootfs("d1");
+        InstallInfo i = store.scan(null).get(0);
+        assertEquals(Distro.DEBIAN, i.distro);
+        assertEquals(DistroVersion.DEBIAN_12, i.version);
+        assertEquals("UTC", i.timezone);
+        assertTrue(i.localeTr);
+        assertEquals("box1", i.hostname);
+        assertEquals(RootSshLogin.PASSWORD, i.rootSshLogin);
+        assertEquals(EnumSet.of(PackageGroup.PYTHON, PackageGroup.NGINX), i.groups);
+        assertEquals(Arrays.asList("htop"), i.extraPackages);
+    }
+
+    @Test
+    public void tamperedMetadataSanitized() throws IOException {
+        writeProps("u1", "distro=ubuntu\nhostname=a;rm -rf\ntimezone=../../etc\nuser=e$(id)\n"
+            + "groups=PYTHON,EVIL\nextraPackages=htop x$(id)\nrootSshLogin=EVIL\nversion=99\n");
+        mkRootfs("u1");
+        InstallInfo i = store.scan(null).get(0);
+        assertEquals("", i.hostname);
+        assertEquals("", i.timezone);
+        assertEquals("", i.user);
+        assertEquals(EnumSet.of(PackageGroup.PYTHON), i.groups);
+        assertEquals(Arrays.asList("htop"), i.extraPackages);
+        assertEquals(RootSshLogin.KEY_ONLY, i.rootSshLogin);
+        assertNull(i.version);
+    }
+
+    @Test
+    public void pkgFailedFlag() throws IOException {
+        store.save(opts("u1", "", ""));
+        mkRootfs("u1");
+        assertFalse(store.scan(null).get(0).packagesFailed);
+        assertTrue(new File(paths.pkgFailedFile("u1")).createNewFile());
+        assertTrue(store.scan(null).get(0).packagesFailed);
+    }
+
+    @Test
+    public void saveClearsStalePkgFailed() throws IOException {
+        assertTrue(new File(paths.metaDir()).mkdirs());
+        assertTrue(new File(paths.pkgFailedFile("u1")).createNewFile());
+        store.save(opts("u1", "", ""));
+        assertFalse(new File(paths.pkgFailedFile("u1")).exists());
+    }
+
+    @Test
+    public void saveEditCreatesAndMarksReady() throws IOException {
+        mkRootfs("m1");
+        store.saveEdit("m1", new EditInfo(Distro.DEBIAN, DistroVersion.DEBIAN_13, "bob", "host1", true, 2200,
+            true, RootSshLogin.NO));
+        InstallInfo i = store.scan(null).get(0);
+        assertEquals(InstallInfo.Status.READY, i.status);
+        assertEquals("bob", i.user);
+        assertEquals("host1", i.hostname);
+        assertTrue(i.ssh);
+        assertEquals(2200, i.sshPort);
+        assertTrue(i.sshAutoStart);
+        assertEquals(RootSshLogin.NO, i.rootSshLogin);
+        assertEquals(DistroVersion.DEBIAN_13, i.version);
+    }
+
+    @Test
+    public void saveEditKeepsUnownedKeysAndRemovesUnknownDistro() throws IOException {
+        writeProps("u1", "distro=ubuntu\nversion=24.04\ntimezone=UTC\n");
+        mkRootfs("u1");
+        store.saveEdit("u1", new EditInfo(null, null, "", "", false, 0, false, RootSshLogin.KEY_ONLY));
+        InstallInfo i = store.scan(null).get(0);
+        assertEquals("UTC", i.timezone);
+        assertNull(i.distro);
+        assertNull(i.version);
+    }
+
+    @Test
+    public void saveEditNullVersionKeepsDistro() throws IOException {
+        writeProps("u1", "distro=ubuntu\nversion=24.04\n");
+        mkRootfs("u1");
+        store.saveEdit("u1", new EditInfo(Distro.UBUNTU, null, "", "", false, 0, false, RootSshLogin.KEY_ONLY));
+        InstallInfo i = store.scan(null).get(0);
+        assertEquals(Distro.UBUNTU, i.distro);
+        assertNull(i.version);
+    }
+
+    @Test
+    public void forgetRemovesAll() throws IOException {
+        store.save(opts("u1", "k", "k2"));
+        mkDone("u1");
+        mkFailed("u1");
+        assertTrue(new File(paths.pkgFailedFile("u1")).createNewFile());
+        store.forget("u1");
+        for (String f : new String[] {paths.metaFile("u1"), paths.doneFile("u1"), paths.failedFile("u1"),
+            paths.pkgFailedFile("u1"), paths.rootKeyFile("u1"), paths.userKeyFile("u1")}) {
+            assertFalse(f, new File(f).exists());
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void forgetRejectsBadAlias() {
+        store.forget("../x");
     }
 
     @Test

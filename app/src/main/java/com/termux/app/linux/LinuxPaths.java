@@ -45,6 +45,10 @@ public final class LinuxPaths {
         return mMetaDir + "/" + alias + ".failed";
     }
 
+    public String pkgFailedFile(String alias) {
+        return mMetaDir + "/" + alias + ".pkgfailed";
+    }
+
     public String rootKeyFile(String alias) {
         return mMetaDir + "/" + alias + ".root.pub";
     }

@@ -120,6 +120,15 @@ public final class InputValidator {
         return errors;
     }
 
+    public static EnumSet<Error> validate(EditInfo e) {
+        EnumSet<Error> errors = EnumSet.noneOf(Error.class);
+        if (!e.user.isEmpty() && !isValidUser(e.user)) errors.add(Error.USER);
+        if (!e.hostname.isEmpty() && !isValidHostname(e.hostname)) errors.add(Error.HOSTNAME);
+        if (e.ssh && !isValidPort(e.sshPort)) errors.add(Error.PORT);
+        if (e.version != null && e.version.distro() != e.distro) errors.add(Error.VERSION);
+        return errors;
+    }
+
     private static boolean keyOk(String stored) {
         if (stored.isEmpty()) return true;
         String n = normalizeKey(stored);
