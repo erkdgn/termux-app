@@ -307,4 +307,21 @@
     <string name="linux_install_invalid">This install is not valid or its name is already in use</string>
     <string name="linux_open_installs">Linux installs</string>
     <string name="linux_cancel">Cancel</string>
+    <string name="linux_section_connection">Connection</string>
+    <string name="linux_section_actions">Actions</string>
+    <string name="linux_update">Update</string>
+    <string name="linux_install_packages">Install packages</string>
+    <string name="linux_edit_info">Edit install info</string>
+    <string name="linux_remove_from_list">Remove from list</string>
+    <string name="linux_remove_from_list_confirm">Remove %1$s from the list? Nothing is deleted from the device except the app\'s settings for this install.</string>
+    <string name="linux_not_connected">Not connected to a network</string>
+    <string name="linux_copy">Copy</string>
+    <string name="linux_copied">Copied</string>
+    <string name="linux_packages_failed_banner">Some packages could not be installed</string>
+    <string name="linux_status_ready">ready</string>
+    <string name="linux_user_label">User: %1$s</string>
+    <string name="linux_host_label">Host: %1$s</string>
+    <string name="linux_ssh_running">running</string>
+    <string name="linux_ssh_stopped">stopped</string>
+    <string name="linux_install_not_found">This install no longer exists</string>
 </resources>

@@ -41,14 +41,6 @@
                 android:textStyle="italic"
                 android:visibility="gone" />
         </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/linux_item_menu"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/linux_more"
-            android:src="@drawable/ic_more_vert" />
     </LinearLayout>
 
     <LinearLayout

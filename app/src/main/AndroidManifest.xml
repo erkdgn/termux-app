@@ -110,6 +110,13 @@
             android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
 
         <activity
+            android:name=".app.activities.LinuxInstallDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".app.activities.LinuxInstallsActivity"
+            android:label="@string/linux_installs_title"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
+        <activity
             android:name=".app.activities.LinuxInstallFormActivity"
             android:exported="false"
             android:parentActivityName=".app.activities.LinuxInstallsActivity"

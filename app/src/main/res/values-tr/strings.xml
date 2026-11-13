@@ -71,4 +71,21 @@
     <string name="linux_install_invalid">Bu kurulum geçerli değil veya adı zaten kullanılıyor</string>
     <string name="linux_open_installs">Linux kurulumları</string>
     <string name="linux_cancel">İptal</string>
+    <string name="linux_section_connection">Bağlantı</string>
+    <string name="linux_section_actions">İşlemler</string>
+    <string name="linux_update">Güncelle</string>
+    <string name="linux_install_packages">Paket kur</string>
+    <string name="linux_edit_info">Kurulum bilgilerini düzenle</string>
+    <string name="linux_remove_from_list">Listeden kaldır</string>
+    <string name="linux_remove_from_list_confirm">%1$s listeden kaldırılsın mı? Cihazdan yalnızca uygulamanın bu kurulum için tuttuğu ayarlar silinir.</string>
+    <string name="linux_not_connected">Bir ağa bağlı değil</string>
+    <string name="linux_copy">Kopyala</string>
+    <string name="linux_copied">Kopyalandı</string>
+    <string name="linux_packages_failed_banner">Bazı paketler kurulamadı</string>
+    <string name="linux_status_ready">hazır</string>
+    <string name="linux_user_label">Kullanıcı: %1$s</string>
+    <string name="linux_host_label">Ana bilgisayar: %1$s</string>
+    <string name="linux_ssh_running">çalışıyor</string>
+    <string name="linux_ssh_stopped">durdu</string>
+    <string name="linux_install_not_found">Bu kurulum artık yok</string>
 </resources>
