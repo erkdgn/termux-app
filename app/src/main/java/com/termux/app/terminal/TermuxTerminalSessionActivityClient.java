@@ -21,6 +21,7 @@ import com.termux.shared.interact.ShareUtils;
 import com.termux.shared.termux.shell.command.runner.terminal.TermuxSession;
 import com.termux.shared.termux.interact.TextInputDialogUtils;
 import com.termux.app.TermuxActivity;
+import com.termux.app.linux.SessionRequest;
 import com.termux.shared.termux.terminal.TermuxTerminalSessionClientBase;
 import com.termux.shared.termux.TermuxConstants;
 import com.termux.app.TermuxService;
@@ -35,6 +36,10 @@ import com.termux.terminal.TextStyle;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /** The {@link TerminalSessionClient} implementation that may require an {@link Activity} for its interface methods. */
@@ -43,6 +48,10 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
     private final TermuxActivity mActivity;
 
     private static final int MAX_SESSIONS = 8;
+
+    /** Input to type into a new session once its shell has started. Only accessed on the main thread
+     * (all callers and TerminalSessionClient callbacks run on the UI thread). */
+    private final Map<TerminalSession, String> mPendingInput = new HashMap<>();
 
     private SoundPool mBellSoundPool;
 
@@ -237,11 +246,15 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
     @Override
     public void setTerminalShellPid(@NonNull TerminalSession terminalSession, int pid) {
         TermuxService service = mActivity.getTermuxService();
-        if (service == null) return;
-        
-        TermuxSession termuxSession = service.getTermuxSessionForTerminalSession(terminalSession);
-        if (termuxSession != null)
-            termuxSession.getExecutionCommand().mPid = pid;
+        if (service != null) {
+            TermuxSession termuxSession = service.getTermuxSessionForTerminalSession(terminalSession);
+            if (termuxSession != null)
+                termuxSession.getExecutionCommand().mPid = pid;
+        }
+
+        // The shell has started now, so input queued by openSessionWithInput() can be written.
+        String pending = mPendingInput.remove(terminalSession);
+        if (pending != null) terminalSession.write(pending);
     }
 
 
@@ -362,30 +375,106 @@ public class TermuxTerminalSessionActivityClient extends TermuxTerminalSessionCl
     }
 
     public void addNewSession(boolean isFailSafe, String sessionName) {
+        TermuxSession newTermuxSession = createSession(isFailSafe, sessionName);
+        if (newTermuxSession == null) return;
+
+        setCurrentSession(newTermuxSession.getTerminalSession());
+        mActivity.getDrawer().closeDrawers();
+    }
+
+    /**
+     * Creates a session, or shows the max terminals dialog and returns null if the limit is reached
+     * (or the service is not available or creation failed).
+     */
+    private TermuxSession createSession(boolean isFailSafe, String sessionName) {
         TermuxService service = mActivity.getTermuxService();
-        if (service == null) return;
+        if (service == null) return null;
 
         if (service.getTermuxSessionsSize() >= MAX_SESSIONS) {
             new AlertDialog.Builder(mActivity).setTitle(R.string.title_max_terminals_reached).setMessage(R.string.msg_max_terminals_reached)
                 .setPositiveButton(android.R.string.ok, null).show();
-        } else {
-            TerminalSession currentSession = mActivity.getCurrentSession();
-
-            String workingDirectory;
-            if (currentSession == null) {
-                workingDirectory = mActivity.getProperties().getDefaultWorkingDirectory();
-            } else {
-                workingDirectory = currentSession.getCwd();
-            }
-
-            TermuxSession newTermuxSession = service.createTermuxSession(null, null, null, workingDirectory, isFailSafe, sessionName);
-            if (newTermuxSession == null) return;
-
-            TerminalSession newTerminalSession = newTermuxSession.getTerminalSession();
-            setCurrentSession(newTerminalSession);
-
-            mActivity.getDrawer().closeDrawers();
+            return null;
         }
+
+        TerminalSession currentSession = mActivity.getCurrentSession();
+
+        String workingDirectory;
+        if (currentSession == null) {
+            workingDirectory = mActivity.getProperties().getDefaultWorkingDirectory();
+        } else {
+            workingDirectory = currentSession.getCwd();
+        }
+
+        return service.createTermuxSession(null, null, null, workingDirectory, isFailSafe, sessionName);
+    }
+
+    /**
+     * Opens a new named session, makes it current and queues {@code input} to be typed once its
+     * shell has started (see {@link #setTerminalShellPid}). Must be called on the main thread.
+     *
+     * @return false if no session was created (e.g. session limit reached).
+     */
+    public boolean openSessionWithInput(String sessionName, String input) {
+        TermuxSession termuxSession = createSession(false, sessionName);
+        if (termuxSession == null) return false;
+
+        TerminalSession terminalSession = termuxSession.getTerminalSession();
+        // Never write now: the shell is only spawned when the view first sizes the session, and
+        // TerminalSession.write() drops data until then.
+        if (input != null && !input.isEmpty()) mPendingInput.put(terminalSession, input);
+        setCurrentSession(terminalSession);
+        mActivity.getDrawer().closeDrawers();
+        return true;
+    }
+
+    /**
+     * Types {@code input} into the session named {@code sessionName}. Main thread only.
+     *
+     * @return false if no such session exists.
+     */
+    public boolean sendToSession(String sessionName, String input) {
+        TermuxService service = mActivity.getTermuxService();
+        if (service == null || sessionName == null) return false;
+
+        for (int i = 0; i < service.getTermuxSessionsSize(); i++) {
+            TermuxSession termuxSession = service.getTermuxSession(i);
+            if (termuxSession == null) continue;
+            TerminalSession terminalSession = termuxSession.getTerminalSession();
+            if (sessionName.equals(terminalSession.mSessionName)) {
+                terminalSession.write(input);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Applies the requests in order, stopping at the first one that fails. Main thread only. */
+    public void applySessionRequests(List<SessionRequest> requests) {
+        if (requests == null) return;
+        for (SessionRequest request : requests) {
+            boolean ok;
+            if (request.kind == SessionRequest.Kind.OPEN)
+                ok = openSessionWithInput(request.sessionName, request.input);
+            else
+                ok = sendToSession(request.sessionName, request.input);
+            if (!ok) return;
+        }
+    }
+
+    /** Names of the currently open sessions (empty string for unnamed ones). */
+    public String[] getOpenSessionNames() {
+        TermuxService service = mActivity.getTermuxService();
+        if (service == null) return new String[0];
+
+        int size = service.getTermuxSessionsSize();
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            TermuxSession termuxSession = service.getTermuxSession(i);
+            if (termuxSession == null) continue;
+            String name = termuxSession.getTerminalSession().mSessionName;
+            names.add(name == null ? "" : name);
+        }
+        return names.toArray(new String[0]);
     }
 
     public void setCurrentStoredSession() {
