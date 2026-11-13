@@ -331,4 +331,12 @@
     <string name="linux_root_login_key_only">Key only</string>
     <string name="linux_root_login_password">Password</string>
     <string name="linux_save">Save</string>
+    <string name="linux_ssh_banner">%1$s - %2$s - SSH server - port %3$d</string>
+    <string name="linux_net_label">%1$s (%2$s)</string>
+    <string name="linux_net_wifi">Wi-Fi</string>
+    <string name="linux_net_hotspot">Hotspot</string>
+    <string name="linux_net_ethernet">Ethernet</string>
+    <string name="linux_net_usb">USB tethering</string>
+    <string name="linux_net_mobile">Mobile data (usually not reachable from other devices)</string>
+    <string name="linux_net_other">Other</string>
 </resources>

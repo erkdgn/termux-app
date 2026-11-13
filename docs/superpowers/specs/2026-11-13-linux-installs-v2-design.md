@@ -183,7 +183,13 @@ User login buttons; the ⋮ menu moves into the detail page). Sections:
 └──────────────────────────────────┘
 ```
 
-- **Connection:** IPv4 addresses from `java.net.NetworkInterface` (up,
+- **Connection:** each address is labeled with its connection kind and
+  interface, e.g. "Wi-Fi (wlan0)", "Hotspot (swlan0)", "Mobile data (rmnet_data0)";
+  order Wi-Fi, hotspot, Ethernet, USB, other, mobile data last.
+- **SSH session banner:** starting SSH clears the session and prints
+  `== <alias> - <version label> - SSH server - port <port> ==` before the
+  install's own sshd starts, so the tab clearly names the install it serves.
+- IPv4 addresses come from `java.net.NetworkInterface` (up,
   non-loopback; `wlan*` first). No new permissions. One ready SSH command per
   address (user if set, else `root`), each with a Copy button
   (`ClipboardManager`). If no address: "Not connected to a network". Shown only

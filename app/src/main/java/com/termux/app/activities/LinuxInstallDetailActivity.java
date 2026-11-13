@@ -173,19 +173,19 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
         Button login = findViewById(R.id.linux_detail_login);
         login.setVisibility(usable ? View.VISIBLE : View.GONE);
         login.setOnClickListener(v -> LinuxActivityHelper.finishWith(this, LinuxActivityHelper.loginRequests(
-            mCommands, info, mOpenSessions, mCommands.login(info.alias, info.hostname))));
+            this, mCommands, info, mOpenSessions, mCommands.login(info.alias, info.hostname))));
 
         Button loginUser = findViewById(R.id.linux_detail_login_user);
         loginUser.setVisibility(usable && validUser ? View.VISIBLE : View.GONE);
         loginUser.setOnClickListener(v -> LinuxActivityHelper.finishWith(this, LinuxActivityHelper.loginRequests(
-            mCommands, info, mOpenSessions, mCommands.loginUser(info.alias, info.hostname, info.user))));
+            this, mCommands, info, mOpenSessions, mCommands.loginUser(info.alias, info.hostname, info.user))));
 
         Button sshToggle = findViewById(R.id.linux_detail_ssh_toggle);
         sshToggle.setVisibility(usable && info.ssh ? View.VISIBLE : View.GONE);
         sshToggle.setText(sshOpen ? R.string.linux_ssh_stop : R.string.linux_ssh_start);
         sshToggle.setOnClickListener(v -> LinuxActivityHelper.finishWith(this, Collections.singletonList(sshOpen
             ? SessionRequest.send(sshName, CommandBuilder.SSH_STOP)
-            : SessionRequest.open(sshName, mCommands.sshStart(info.alias, info.hostname)))));
+            : SessionRequest.open(sshName, LinuxActivityHelper.sshStart(this, mCommands, info)))));
 
         bind(R.id.linux_detail_update, usable, v ->
             openAction(mCommands.update(info.alias, info.hostname)));
@@ -229,15 +229,28 @@ public class LinuxInstallDetailActivity extends AppCompatActivity {
         section.setVisibility(info.ssh && info.status != InstallInfo.Status.NOT_FOUND ? View.VISIBLE : View.GONE);
         LinearLayout list = findViewById(R.id.linux_detail_connection_list);
         list.removeAllViews();
-        List<String> ips = HostAddresses.ordered(HostAddresses.fromSystem());
-        findViewById(R.id.linux_detail_no_network).setVisibility(ips.isEmpty() ? View.VISIBLE : View.GONE);
-        for (String ip : ips) {
+        List<HostAddresses.Address> addresses = HostAddresses.classified(HostAddresses.fromSystem());
+        findViewById(R.id.linux_detail_no_network).setVisibility(addresses.isEmpty() ? View.VISIBLE : View.GONE);
+        for (HostAddresses.Address address : addresses) {
             final String command = CommandBuilder.displaySshCommand(
-                InputValidator.isValidUser(info.user) ? info.user : "", info.sshPort, ip);
+                InputValidator.isValidUser(info.user) ? info.user : "", info.sshPort, address.ip);
             View row = LayoutInflater.from(this).inflate(R.layout.item_linux_connection, list, false);
+            ((TextView) row.findViewById(R.id.linux_connection_kind)).setText(
+                getString(R.string.linux_net_label, getString(kindLabel(address.kind)), address.iface));
             ((TextView) row.findViewById(R.id.linux_connection_command)).setText(command);
             row.findViewById(R.id.linux_connection_copy).setOnClickListener(v -> copy(command));
             list.addView(row);
+        }
+    }
+
+    private static int kindLabel(HostAddresses.Kind kind) {
+        switch (kind) {
+            case WIFI: return R.string.linux_net_wifi;
+            case HOTSPOT: return R.string.linux_net_hotspot;
+            case ETHERNET: return R.string.linux_net_ethernet;
+            case USB: return R.string.linux_net_usb;
+            case MOBILE: return R.string.linux_net_mobile;
+            default: return R.string.linux_net_other;
         }
     }
 

@@ -136,13 +136,13 @@ public class LinuxInstallsActivity extends AppCompatActivity {
     }
 
     private void login(InstallInfo info) {
-        finishWith(LinuxActivityHelper.loginRequests(mCommands, info, mOpenSessions,
+        finishWith(LinuxActivityHelper.loginRequests(this, mCommands, info, mOpenSessions,
             mCommands.login(info.alias, info.hostname)));
     }
 
     private void loginUser(InstallInfo info) {
         if (!InputValidator.isValidUser(info.user)) return;
-        finishWith(LinuxActivityHelper.loginRequests(mCommands, info, mOpenSessions,
+        finishWith(LinuxActivityHelper.loginRequests(this, mCommands, info, mOpenSessions,
             mCommands.loginUser(info.alias, info.hostname, info.user)));
     }
 

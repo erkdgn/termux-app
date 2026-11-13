@@ -6,6 +6,7 @@ import android.content.Intent;
 
 import com.termux.R;
 import com.termux.app.linux.CommandBuilder;
+import com.termux.app.linux.InputValidator;
 import com.termux.app.linux.InstallInfo;
 import com.termux.app.linux.LinuxPaths;
 import com.termux.app.linux.SessionNames;
@@ -45,17 +46,33 @@ final class LinuxActivityHelper {
      *
      * @param loginCommand the already built login command line
      */
-    static List<SessionRequest> loginRequests(CommandBuilder commands, InstallInfo info,
+    static List<SessionRequest> loginRequests(Context context, CommandBuilder commands, InstallInfo info,
                                               Set<String> openSessions, String loginCommand) {
         List<SessionRequest> requests = new ArrayList<>();
         Set<String> taken = new HashSet<>(openSessions);
         String sshName = SessionNames.ssh(info.alias);
         if (info.ssh && info.sshAutoStart && !openSessions.contains(sshName)) {
-            requests.add(SessionRequest.open(sshName, commands.sshStart(info.alias, info.hostname)));
+            requests.add(SessionRequest.open(sshName, sshStart(context, commands, info)));
             taken.add(sshName);
         }
         requests.add(SessionRequest.open(SessionNames.firstFree(info.alias, taken), loginCommand));
         return requests;
+    }
+
+    /** "Distro version" label of an install, falling back to the distro and then "Unknown". */
+    static String systemLabel(Context context, InstallInfo info) {
+        if (info.version != null) return info.version.label();
+        if (info.distro != null) return info.distro.label();
+        return context.getString(R.string.linux_unknown_distro);
+    }
+
+    /**
+     * The sshd start command with a banner naming the install, e.g.
+     * "== ubuntu - Ubuntu 26.04 LTS - SSH server - port 2022 =="; no banner if it would be unsafe.
+     */
+    static String sshStart(Context context, CommandBuilder commands, InstallInfo info) {
+        String banner = context.getString(R.string.linux_ssh_banner, info.alias, systemLabel(context, info), info.sshPort);
+        return commands.sshStart(info.alias, info.hostname, InputValidator.isSafeLabel(banner) ? banner : "");
     }
 
     static boolean downloadsAvailable() {

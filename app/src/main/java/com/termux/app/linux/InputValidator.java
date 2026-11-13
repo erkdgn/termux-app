@@ -77,7 +77,7 @@ public final class InputValidator {
         for (int i = 0; i < label.length(); i++) {
             char c = label.charAt(i);
             boolean ok = Character.isLetter(c) || (c >= '0' && c <= '9') || c == ' ' || c == '='
-                || c == ':' || c == '.' || c == '-' || c == '_';
+                || c == ':' || c == '.' || c == '-' || c == '_' || c == '(' || c == ')';
             if (!ok) return false;
         }
         return true;

@@ -14,6 +14,58 @@ public final class HostAddresses {
 
     private HostAddresses() {}
 
+    /** What kind of connection an interface is, in display order (mobile data last). */
+    public enum Kind { WIFI, HOTSPOT, ETHERNET, USB, OTHER, MOBILE }
+
+    /** One IPv4 address with its interface. */
+    public static final class Address {
+        public final String ip;
+        public final String iface;
+        public final Kind kind;
+
+        Address(String ip, String iface, Kind kind) {
+            this.ip = ip;
+            this.iface = iface;
+            this.kind = kind;
+        }
+    }
+
+    /** Classifies an Android network interface name; unknown names are {@link Kind#OTHER}. */
+    public static Kind kindOf(String iface) {
+        if (iface == null) return Kind.OTHER;
+        if (iface.equals("wlan0")) return Kind.WIFI;
+        if (iface.startsWith("swlan") || iface.startsWith("softap") || iface.startsWith("ap")
+            || iface.matches("wlan[1-9]\\d*")) return Kind.HOTSPOT;
+        if (iface.startsWith("eth")) return Kind.ETHERNET;
+        if (iface.startsWith("rndis") || iface.startsWith("usb") || iface.startsWith("ncm")) return Kind.USB;
+        if (iface.startsWith("rmnet") || iface.startsWith("v4-rmnet") || iface.startsWith("r_rmnet")
+            || iface.startsWith("ccmni") || iface.startsWith("pdp") || iface.startsWith("seth")) return Kind.MOBILE;
+        return Kind.OTHER;
+    }
+
+    /**
+     * IPv4 addresses with their interface and kind, ordered by {@link Kind} (Wi-Fi first, mobile
+     * data last), input order within a kind; loopback, non-IPv4 and duplicate addresses dropped.
+     */
+    public static List<Address> classified(List<String[]> ifaceAndIpv4) {
+        List<Address> all = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        if (ifaceAndIpv4 != null) {
+            for (String[] p : ifaceAndIpv4) {
+                if (p == null || p.length < 2 || p[0] == null || p[1] == null) continue;
+                if (!isIpv4(p[1]) || p[1].startsWith("127.") || !seen.add(p[1])) continue;
+                all.add(new Address(p[1], p[0], kindOf(p[0])));
+            }
+        }
+        List<Address> out = new ArrayList<>();
+        for (Kind k : Kind.values()) {
+            for (Address a : all) {
+                if (a.kind == k) out.add(a);
+            }
+        }
+        return out;
+    }
+
     /**
      * @param ifaceAndIpv4 [interface name, address] pairs
      * @return IPv4 addresses, "wlan*" interfaces first, then the others in input order; loopback,

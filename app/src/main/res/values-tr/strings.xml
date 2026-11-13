@@ -95,4 +95,12 @@
     <string name="linux_root_login_key_only">Yalnız anahtar</string>
     <string name="linux_root_login_password">Şifre ile</string>
     <string name="linux_save">Kaydet</string>
+    <string name="linux_ssh_banner">%1$s - %2$s - SSH sunucusu - port %3$d</string>
+    <string name="linux_net_label">%1$s (%2$s)</string>
+    <string name="linux_net_wifi">Wi-Fi</string>
+    <string name="linux_net_hotspot">Erişim noktası (hotspot)</string>
+    <string name="linux_net_ethernet">Ethernet</string>
+    <string name="linux_net_usb">USB bağlantısı</string>
+    <string name="linux_net_mobile">Mobil veri (genelde başka cihazlardan erişilemez)</string>
+    <string name="linux_net_other">Diğer</string>
 </resources>

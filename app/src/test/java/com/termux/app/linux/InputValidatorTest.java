@@ -139,6 +139,10 @@ public class InputValidatorTest {
         assertFalse(InputValidator.isSafeLabel("a`b"));
         assertFalse(InputValidator.isSafeLabel("a'b"));
         assertFalse(InputValidator.isSafeLabel(""));
+        assertTrue(InputValidator.isSafeLabel("ubuntu - Debian 13 (trixie) - SSH sunucusu - port 2022"));
+        assertFalse(InputValidator.isSafeLabel("a;b"));
+        assertFalse(InputValidator.isSafeLabel("a!b"));
+        assertFalse(InputValidator.isSafeLabel("a\\b"));
     }
 
     @Test

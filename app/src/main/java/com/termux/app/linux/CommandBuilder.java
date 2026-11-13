@@ -94,7 +94,19 @@ public final class CommandBuilder {
     }
 
     public String sshStart(String alias, String hostname) {
-        return "exec " + loginPrefix(alias, hostname) + " -- /usr/sbin/sshd -D -e\n";
+        return sshStart(alias, hostname, "");
+    }
+
+    /**
+     * Starts the install's own sshd in the foreground. A non-empty {@code banner} is printed first
+     * (after clearing Termux's welcome text) so the session clearly names the install it serves;
+     * it must pass {@link InputValidator#isSafeLabel}.
+     */
+    public String sshStart(String alias, String hostname, String banner) {
+        String start = "exec " + loginPrefix(alias, hostname) + " -- /usr/sbin/sshd -D -e\n";
+        if (banner == null || banner.isEmpty()) return start;
+        if (!InputValidator.isSafeLabel(banner)) throw new IllegalArgumentException("Unsafe banner");
+        return "clear && echo \"== " + banner + " ==\" && " + start;
     }
 
     public String update(String alias, String hostname) {

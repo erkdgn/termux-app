@@ -201,6 +201,19 @@ public class CommandBuilderTest {
     }
 
     @Test
+    public void sshStartWithBanner() {
+        assertEquals("clear && echo \"== ubuntu - Ubuntu 26.04 LTS - SSH sunucusu - port 2022 ==\" && "
+                + "exec proot-distro login ubuntu --hostname ubuntu -- /usr/sbin/sshd -D -e\n",
+            b.sshStart("ubuntu", "ubuntu", "ubuntu - Ubuntu 26.04 LTS - SSH sunucusu - port 2022"));
+        assertEquals(b.sshStart("u1", ""), b.sshStart("u1", "", ""));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void sshStartUnsafeBannerRejected() {
+        b.sshStart("u1", "", "x$(id)");
+    }
+
+    @Test
     public void setPassword() {
         assertEquals("proot-distro login u1 -- passwd root\n", b.setPassword("u1", "", "root"));
         assertEquals("proot-distro login u1 --hostname box1 -- passwd root\n", b.setPassword("u1", "box1", "root"));
